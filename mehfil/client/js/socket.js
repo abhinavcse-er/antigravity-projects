@@ -18,9 +18,10 @@ const MehfilSocket = (function () {
             return;
         }
 
-        socket = io({
-            query: { mood: initialMood }
-        });
+       socket = io("https://mehfil-backend-ing6.onrender.com", {
+    query: { mood: initialMood },
+    transports: ["websocket", "polling"]
+});
 
         socket.on("connect", () => {
             isConnected = true;
