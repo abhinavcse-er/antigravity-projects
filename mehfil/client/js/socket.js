@@ -13,6 +13,23 @@ const MehfilSocket = (function () {
     let currentUser = null;
     let currentMood = "love";
     let isConnected = false;
+    let presencePollTimer = null;
+
+    async function refreshPresenceSnapshot() {
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/status`, { cache: "no-store" });
+            if (!response.ok) throw new Error(`Presence status HTTP ${response.status}`);
+            const payload = await response.json();
+            if (payload?.status === "online" && Number.isFinite(Number(payload.listeners))) {
+                updateAudienceUI({ total: payload.listeners, moods: payload.moods || {} });
+                document.body.classList.toggle("mehfil-live-connected", isConnected);
+                return true;
+            }
+        } catch (error) {
+            console.warn("[SOCKET] Presence snapshot unavailable:", error.message);
+        }
+        return false;
+    }
 
     function init(initialMood = "love") {
         currentMood = VALID_MOODS.has(initialMood) ? initialMood : "love";
@@ -40,11 +57,14 @@ const MehfilSocket = (function () {
 
         socket.on("connect", () => {
             isConnected = true;
+            document.body.classList.add("mehfil-live-connected");
             console.log("[SOCKET] Connected to MEHFIL backend:", socket.id);
+            refreshPresenceSnapshot();
         });
 
         socket.on("connect_error", (error) => {
             isConnected = false;
+            document.body.classList.remove("mehfil-live-connected");
             console.error("[SOCKET] Connection failed:", error.message);
         });
 
@@ -88,14 +108,27 @@ const MehfilSocket = (function () {
             }
         });
 
+        socket.io.on("reconnect", () => refreshPresenceSnapshot());
+
         socket.on("disconnect", (reason) => {
             isConnected = false;
+            document.body.classList.remove("mehfil-live-connected");
             console.warn("[SOCKET] Disconnected from MEHFIL backend:", reason);
+        });
+
+        // REST snapshot is a recovery path if a realtime presence packet is missed.
+        if (presencePollTimer) window.clearInterval(presencePollTimer);
+        refreshPresenceSnapshot();
+        presencePollTimer = window.setInterval(() => {
+            if (!document.hidden) refreshPresenceSnapshot();
+        }, 15000);
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) refreshPresenceSnapshot();
         });
     }
 
     function updateAudienceUI(stats) {
-        if (!stats || !Number.isFinite(Number(stats.total))) return;
+        if (!stats || stats.total === undefined || !Number.isFinite(Number(stats.total))) return;
 
         const total = Math.max(0, Math.floor(Number(stats.total)));
         const formattedTotal = total.toLocaleString();
