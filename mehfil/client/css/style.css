@@ -4440,3 +4440,173 @@ body.mood-changing .background-image {
     padding: 18px 12px; color: #aaa2ad; text-align: center; font-size: 12px;
 }
 .mehfil-search-loading i { margin-right: 7px; color: var(--accent); }
+
+
+/* =========================================================
+   POLISHED ICON SYSTEM + CREATOR CREDIT
+   ========================================================= */
+.header i,
+.navigation i,
+.mood-icon i,
+.surprise-icon i,
+.track-meta i,
+.player-controls i,
+.bottom-controls i,
+.bottom-player i,
+.modal-header i,
+.reaction-btn i,
+.creator-credit i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.navigation i {
+    width: 1.25em;
+    text-align: center;
+    flex: 0 0 1.25em;
+}
+
+.mood-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    font-size: 15px;
+}
+
+.player-controls button,
+.bottom-controls button,
+.favorite-button,
+.volume-button,
+.collapse-player,
+.reaction-btn,
+.modal-close-btn,
+.menu-button {
+    min-width: 40px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-controls button i,
+.bottom-controls button i,
+.favorite-button i,
+.volume-button i,
+.reaction-btn i {
+    font-size: 1rem;
+}
+
+.reaction-btn {
+    border-radius: 12px;
+    font-size: 16px;
+    color: var(--text);
+    background: rgba(255,255,255,.045);
+    border: 1px solid var(--border);
+    transition: var(--transition);
+}
+.reaction-btn:hover {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    transform: translateY(-2px);
+}
+
+.creator-credit {
+    width: min(1180px, calc(100% - 48px));
+    margin: 22px auto 112px;
+    padding: 17px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: linear-gradient(110deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+    box-shadow: 0 12px 35px rgba(0,0,0,.13);
+}
+.creator-credit-mark {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 13%, transparent);
+    font-size: 17px;
+}
+.creator-credit-copy { min-width: 0; flex: 1; }
+.creator-credit-eyebrow {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+.creator-credit-copy p {
+    margin: 0;
+    color: var(--text);
+    font-size: 14px;
+}
+.creator-credit-copy strong { color: var(--accent); }
+.creator-credit-copy small {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 11px;
+}
+.creator-credit-link {
+    min-height: 40px;
+    padding: 0 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    color: var(--text);
+    text-decoration: none;
+    font-size: 12px;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+.creator-credit-link:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+@media (max-width: 760px) {
+    .mood-icon { width: 32px; height: 32px; font-size: 14px; }
+    .player-controls button,
+    .bottom-controls button,
+    .favorite-button,
+    .volume-button,
+    .collapse-player,
+    .reaction-btn,
+    .modal-close-btn,
+    .menu-button {
+        min-width: 38px;
+        min-height: 38px;
+    }
+    .creator-credit {
+        width: calc(100% - 24px);
+        margin: 16px auto 130px;
+        padding: 14px;
+        gap: 10px;
+        border-radius: 15px;
+    }
+    .creator-credit-mark { width: 38px; height: 38px; flex-basis: 38px; }
+    .creator-credit-copy p { font-size: 12px; }
+    .creator-credit-eyebrow { font-size: 8px; letter-spacing: 1px; }
+    .creator-credit-link { padding: 0 10px; gap: 7px; font-size: 11px; }
+}
+@media (max-width: 420px) {
+    .creator-credit { flex-wrap: wrap; }
+    .creator-credit-copy { flex-basis: calc(100% - 52px); }
+    .creator-credit-link { margin-left: 48px; }
+    .mood-icon { width: 30px; height: 30px; }
+    .player-controls button,
+    .bottom-controls button { min-width: 34px; min-height: 36px; }
+}
