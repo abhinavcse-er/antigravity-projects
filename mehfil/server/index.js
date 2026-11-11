@@ -12,62 +12,58 @@ const radioService = require('./services/radioService');
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.IO
+// Socket.IO: websocket first, polling fallback remains available for restrictive networks.
 const io = new Server(server, {
   cors: {
     origin: config.corsOrigin,
     methods: ['GET', 'POST']
-  }
+  },
+  perMessageDeflate: false,
+  maxHttpBufferSize: 1e6,
+  pingInterval: 25000,
+  pingTimeout: 20000
 });
 
-// Attach io to express app for route access
 app.set('io', io);
 
-// Middlewares
 app.use(cors({ origin: config.corsOrigin }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '32kb' }));
+app.use(express.urlencoded({ extended: true, limit: '32kb' }));
 
-// Serve API routes
 app.use('/api', apiRouter);
 
-// Serve static frontend assets
+// Serve the app shell with revalidation; allow short-lived caching for static assets.
 const clientPath = path.join(__dirname, '../client');
-app.use(express.static(clientPath));
+app.use(express.static(clientPath, {
+  etag: true,
+  lastModified: true,
+  maxAge: '5m',
+  setHeaders(res, filePath) {
+    if (path.basename(filePath) === 'index.html') {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
+    }
+  }
+}));
 
-// Fallback for SPA routing to index.html
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();
+  res.setHeader('Cache-Control', 'no-cache');
   res.sendFile(path.join(clientPath, 'index.html'));
 });
 
-// Setup WebSockets
 setupSockets(io);
-
-// Initialize Synchronized Radio Service
 radioService.init(io);
 
-// Start Server
 const PORT = config.port;
 server.listen(PORT, () => {
-  console.log(`
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║   📻  MEHFIL — Jahan Har Mood Ka Ek Gaana Hai                ║
-║   Full-Stack Realtime Radio & Music Lounge                   ║
-║                                                              ║
-║   📡 Server Running at: http://localhost:${PORT}             ║
-║   🎶 Live API:          http://localhost:${PORT}/api/status     ║
-║   ⚡ WebSocket:         Connected via Socket.IO              ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-  `);
+  console.log(`MEHFIL backend listening on port ${PORT}`);
 });
 
-// Error handling
 process.on('uncaughtException', (err) => {
   console.error('[MEHFIL] Uncaught Exception:', err);
 });
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('[MEHFIL] Unhandled Rejection:', reason);
 });
