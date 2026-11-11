@@ -95,9 +95,138 @@
         const form = $("quickSongSearch");
         const input = $("quickSongSearchInput");
         const button = $("quickSongSearchButton");
-        if (!form || !input) return;
+        const suggestions = $("quickSongSuggestions");
+        if (!form || !input || !suggestions) return;
 
-        form.addEventListener("submit", async (event) => {
+        let debounceTimer = null;
+        let requestVersion = 0;
+        let suggestionSongs = [];
+        let activeIndex = -1;
+
+        const closeSuggestions = () => {
+            suggestions.hidden = true;
+            suggestions.innerHTML = "";
+            suggestionSongs = [];
+            activeIndex = -1;
+            input.setAttribute("aria-expanded", "false");
+        };
+
+        const playSelectedSong = (song) => {
+            if (!song) return;
+            const list = suggestionSongs.length ? suggestionSongs : [song];
+            state.songs = list;
+            state.currentIndex = Math.max(0, list.findIndex(item => item.id === song.id));
+            playSongAtIndex(state.currentIndex, true);
+            input.value = song.title;
+            closeSuggestions();
+            window.showMehfilToast("Playing: " + song.title);
+        };
+
+        const renderSuggestions = (songs) => {
+            suggestionSongs = songs;
+            activeIndex = -1;
+            suggestions.innerHTML = "";
+
+            if (!songs.length) {
+                const empty = document.createElement("div");
+                empty.className = "mehfil-search-empty";
+                empty.textContent = "No songs found. Try another name.";
+                suggestions.appendChild(empty);
+                suggestions.hidden = false;
+                input.setAttribute("aria-expanded", "true");
+                return;
+            }
+
+            songs.forEach((song, index) => {
+                const item = document.createElement("button");
+                item.type = "button";
+                item.className = "mehfil-suggestion";
+                item.setAttribute("role", "option");
+                item.setAttribute("aria-selected", "false");
+
+                if (song.cover) {
+                    const cover = document.createElement("img");
+                    cover.src = song.cover;
+                    cover.alt = "";
+                    cover.loading = "lazy";
+                    item.appendChild(cover);
+                }
+
+                const details = document.createElement("span");
+                details.className = "mehfil-suggestion-details";
+                const title = document.createElement("strong");
+                title.textContent = song.title || "Unknown song";
+                const artist = document.createElement("small");
+                artist.textContent = song.artist || "Unknown artist";
+                details.append(title, artist);
+                item.appendChild(details);
+
+                item.addEventListener("mousedown", event => event.preventDefault());
+                item.addEventListener("click", () => playSelectedSong(song));
+                suggestions.appendChild(item);
+            });
+
+            suggestions.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+        };
+
+        const searchSuggestions = async (query) => {
+            const version = ++requestVersion;
+            try {
+                const songs = await MehfilAPI.getSongs({ search: query, mood: "all", limit: 8 });
+                if (version !== requestVersion || input.value.trim() !== query) return;
+                renderSuggestions(Array.isArray(songs) ? songs.slice(0, 8) : []);
+            } catch (error) {
+                if (version !== requestVersion) return;
+                console.error("[MEHFIL] Suggestions failed:", error);
+                renderSuggestions([]);
+            }
+        };
+
+        input.setAttribute("autocomplete", "off");
+        input.setAttribute("aria-autocomplete", "list");
+        input.setAttribute("aria-controls", "quickSongSuggestions");
+        input.setAttribute("aria-expanded", "false");
+
+        input.addEventListener("input", () => {
+            const query = input.value.trim();
+            clearTimeout(debounceTimer);
+            if (query.length < 2) {
+                requestVersion++;
+                closeSuggestions();
+                return;
+            }
+            suggestions.innerHTML = '<div class="mehfil-search-loading"><i class="fa-solid fa-spinner fa-spin"></i> Finding songs...</div>';
+            suggestions.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+            debounceTimer = setTimeout(() => searchSuggestions(query), 300);
+        });
+
+        input.addEventListener("keydown", event => {
+            if (suggestions.hidden) return;
+            const items = Array.from(suggestions.querySelectorAll(".mehfil-suggestion"));
+            if (event.key === "ArrowDown" && items.length) {
+                event.preventDefault();
+                activeIndex = (activeIndex + 1) % items.length;
+            } else if (event.key === "ArrowUp" && items.length) {
+                event.preventDefault();
+                activeIndex = activeIndex <= 0 ? items.length - 1 : activeIndex - 1;
+            } else if (event.key === "Enter" && items.length) {
+                event.preventDefault();
+                const selected = activeIndex >= 0 ? suggestionSongs[activeIndex] : suggestionSongs[0];
+                playSelectedSong(selected);
+            } else if (event.key === "Escape") {
+                closeSuggestions();
+            } else {
+                return;
+            }
+            items.forEach((item, index) => {
+                item.classList.toggle("active", index === activeIndex);
+                item.setAttribute("aria-selected", String(index === activeIndex));
+            });
+        });
+
+        form.addEventListener("submit", event => {
             event.preventDefault();
             const query = input.value.trim();
             if (!query) {
@@ -105,30 +234,15 @@
                 window.showMehfilToast("Enter a song or artist name first.");
                 return;
             }
-
-            if (button) button.disabled = true;
-            const originalLabel = button ? button.innerHTML : "";
-            if (button) button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Searching</span>';
-
-            try {
-                const results = await MehfilAPI.getSongs({ search: query, mood: "all", limit: 10 });
-                if (!Array.isArray(results) || !results.length) {
-                    window.showMehfilToast("No matching songs found. Try another search.");
-                    return;
-                }
-                state.songs = results;
-                state.currentIndex = 0;
-                playSongAtIndex(0, true);
-                window.showMehfilToast("Playing: " + results[0].title);
-            } catch (error) {
-                console.error("[MEHFIL] Song search failed:", error);
-                window.showMehfilToast("Song search failed. Please try again.");
-            } finally {
-                if (button) {
-                    button.disabled = false;
-                    button.innerHTML = originalLabel;
-                }
+            if (suggestionSongs.length) {
+                playSelectedSong(suggestionSongs[activeIndex >= 0 ? activeIndex : 0]);
+            } else {
+                searchSuggestions(query);
             }
+        });
+
+        document.addEventListener("click", event => {
+            if (!form.contains(event.target)) closeSuggestions();
         });
     }
 
