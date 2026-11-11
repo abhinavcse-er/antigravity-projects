@@ -6,6 +6,32 @@ const songService = require('../services/songService');
 const presenceService = require('../services/presenceService');
 const radioService = require('../services/radioService');
 
+let presenceBroadcastTimer = null;
+
+function schedulePresenceBroadcast(io) {
+  if (!io || presenceBroadcastTimer) return;
+  presenceBroadcastTimer = setTimeout(() => {
+    presenceBroadcastTimer = null;
+    io.emit('presence:update', presenceService.getStats());
+  }, 500);
+}
+
+
+ // POST /api/presence/heartbeat
+// HTTP heartbeat keeps the live audience accurate when a device's WebSocket
+// is blocked or temporarily reconnecting. The device ID is shared with Socket.IO.
+router.post('/presence/heartbeat', (req, res) => {
+  const clientKey = String(req.headers['x-user-id'] || '').trim();
+  if (!/^[a-zA-Z0-9_-]{6,100}$/.test(clientKey)) {
+    return res.status(400).json({ error: 'A valid client ID is required' });
+  }
+
+  const mood = String(req.body?.mood || 'love');
+  const stats = presenceService.heartbeat(clientKey, mood);
+  schedulePresenceBroadcast(req.app.get('io'));
+  res.json({ ok: true, stats });
+});
+
 // GET /api/status
 router.get('/status', (req, res) => {
   const stats = presenceService.getStats();
