@@ -6,6 +6,7 @@ const NICKNAMES = [
 ];
 
 const AVATARS = ['🎶', '🥀', '☕', '🌧️', '✨', '🎸', '📻', '🌙', '🎧', '🚗'];
+const HEARTBEAT_TTL_MS = 70000;
 
 const VALID_MOODS = new Set([
   'love', 'dard', 'sukoon', 'safar', 'happy', 'late-night'
@@ -13,43 +14,104 @@ const VALID_MOODS = new Set([
 
 class PresenceService {
   constructor() {
-    // One entry per currently connected Socket.IO session.
+    // One active entry per browser/device ID. Socket and HTTP heartbeat
+    // sessions share the same key, so they never inflate the live count.
     this.clients = new Map();
+    this.socketToClient = new Map();
   }
 
-  addClient(socketId, initialMood = 'love') {
+  createClient(clientKey, initialMood = 'love') {
     const nickname = NICKNAMES[Math.floor(Math.random() * NICKNAMES.length)] + '-' + Math.floor(10 + Math.random() * 90);
     const avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
-    const mood = VALID_MOODS.has(initialMood) ? initialMood : 'love';
-    const clientData = {
-      socketId,
+    return {
+      clientKey,
       nickname,
       avatar,
-      mood,
-      joinedAt: Date.now()
+      mood: VALID_MOODS.has(initialMood) ? initialMood : 'love',
+      joinedAt: Date.now(),
+      lastSeen: Date.now(),
+      socketIds: new Set()
     };
-    this.clients.set(socketId, clientData);
-    return clientData;
+  }
+
+  addClient(socketId, initialMood = 'love', clientKey = socketId) {
+    const key = String(clientKey || socketId).slice(0, 100);
+    let client = this.clients.get(key);
+    if (!client) {
+      client = this.createClient(key, initialMood);
+      this.clients.set(key, client);
+    }
+
+    client.mood = VALID_MOODS.has(initialMood) ? initialMood : client.mood;
+    client.lastSeen = Date.now();
+    client.socketIds.add(socketId);
+    this.socketToClient.set(socketId, key);
+    return this.toPublicClient(client, socketId);
+  }
+
+  heartbeat(clientKey, mood = 'love') {
+    const key = String(clientKey || '').trim().slice(0, 100);
+    if (!key) return null;
+
+    let client = this.clients.get(key);
+    if (!client) {
+      client = this.createClient(key, mood);
+      this.clients.set(key, client);
+    }
+
+    if (VALID_MOODS.has(mood)) client.mood = mood;
+    client.lastSeen = Date.now();
+    return this.getStats();
   }
 
   removeClient(socketId) {
-    const client = this.clients.get(socketId) || null;
-    this.clients.delete(socketId);
-    return client;
+    const key = this.socketToClient.get(socketId);
+    if (!key) return null;
+
+    this.socketToClient.delete(socketId);
+    const client = this.clients.get(key);
+    if (!client) return null;
+
+    client.socketIds.delete(socketId);
+    if (client.socketIds.size === 0 && Date.now() - client.lastSeen > HEARTBEAT_TTL_MS) {
+      this.clients.delete(key);
+    }
+    return this.toPublicClient(client);
   }
 
   updateClientMood(socketId, mood) {
-    const client = this.clients.get(socketId);
+    const key = this.socketToClient.get(socketId);
+    const client = key ? this.clients.get(key) : null;
     if (!client) return null;
     client.mood = VALID_MOODS.has(mood) ? mood : 'love';
-    return client;
+    client.lastSeen = Date.now();
+    return this.toPublicClient(client, socketId);
   }
 
   getClient(socketId) {
-    return this.clients.get(socketId) || null;
+    const key = this.socketToClient.get(socketId);
+    const client = key ? this.clients.get(key) : null;
+    return client ? this.toPublicClient(client, socketId) : null;
+  }
+
+  toPublicClient(client, socketId = null) {
+    return {
+      socketId,
+      nickname: client.nickname,
+      avatar: client.avatar,
+      mood: client.mood,
+      joinedAt: client.joinedAt
+    };
   }
 
   getStats() {
+    const now = Date.now();
+    for (const [key, client] of this.clients.entries()) {
+      if (client.socketIds.size === 0 && now - client.lastSeen > HEARTBEAT_TTL_MS) {
+        this.clients.delete(key);
+      }
+    }
+
     const moods = {
       love: 0,
       dard: 0,
@@ -65,11 +127,7 @@ class PresenceService {
     }
 
     const total = this.clients.size;
-    return {
-      total,
-      realConnected: total,
-      moods
-    };
+    return { total, realConnected: total, moods };
   }
 }
 
