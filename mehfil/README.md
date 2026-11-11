@@ -108,12 +108,9 @@ The application will start on **http://localhost:3000**.
 | `Esc` | Close any active modal dialog |
 
 
-## Persistent database storage (Render)
+## Database storage (Render Free and paid options)
 
-MEHFIL uses SQLite for its current single-instance deployment. To keep community posts, requests, and favorites across redeploys, attach a Render Persistent Disk to the backend service and mount it at `/var/data`. Then set the service environment variable:
+- **Render Free (zero-cost setup):** Leave `DB_PATH` unset. On Render, MEHFIL uses SQLite in the writable temporary directory. The database works while the service instance is running, but its contents can be lost when the free service restarts, sleeps, or redeploys. This is expected on an ephemeral filesystem.
+- **Persistent storage (optional, may cost extra):** Attach a Render Persistent Disk mounted at `/var/data`, then set `DB_PATH=/var/data/mehfil.db`. Do this only if you intentionally choose a paid disk/service arrangement and have checked the current Render pricing.
 
-```env
-DB_PATH=/var/data/mehfil.db
-```
-
-Deploy after attaching the disk. Do not point `DB_PATH` at the repository checkout when you need data to survive deploys. This single-instance SQLite setup is appropriate for the initial 1,000-listener target only after load testing; multiple backend instances need a shared database and shared presence store.
+The default free setup is single-instance. Live presence is held in process memory, so this setup is not a guarantee of 1,000 concurrent listeners. Validate capacity with staged load tests before advertising that target.
