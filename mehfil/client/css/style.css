@@ -3276,25 +3276,32 @@ body:not(.is-playing) .audio-wave span {
     aspect-ratio: 1 / 1;
 }
 
+/* Keep the official YouTube player visible, but frame it like a video
+   window inside the album artwork instead of letting it cover the whole card. */
 .youtube-player-surface {
     position: absolute;
-    inset: 0;
     z-index: 2;
-    width: 100%;
-    height: 100%;
-    min-width: 200px;
-    min-height: 200px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    min-width: 0;
+    min-height: 0;
     overflow: hidden;
-    border-radius: inherit;
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 12px;
     background: #08090b;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .48);
 }
 
 .youtube-player-surface iframe {
     display: block;
     width: 100% !important;
     height: 100% !important;
-    min-width: 200px;
-    min-height: 200px;
+    min-width: 0;
+    min-height: 0;
     border: 0;
 }
 
