@@ -7,22 +7,25 @@ const NICKNAMES = [
 
 const AVATARS = ['🎶', '🥀', '☕', '🌧️', '✨', '🎸', '📻', '🌙', '🎧', '🚗'];
 
-// Baseline active listeners to simulate a vibrant live radio room
-const BASE_LISTENERS = 1240;
+const VALID_MOODS = new Set([
+  'love', 'dard', 'sukoon', 'safar', 'happy', 'late-night'
+]);
 
 class PresenceService {
   constructor() {
-    this.clients = new Map(); // socketId -> { id, nickname, avatar, mood, joinedAt }
+    // One entry per currently connected Socket.IO session.
+    this.clients = new Map();
   }
 
   addClient(socketId, initialMood = 'love') {
     const nickname = NICKNAMES[Math.floor(Math.random() * NICKNAMES.length)] + '-' + Math.floor(10 + Math.random() * 90);
     const avatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+    const mood = VALID_MOODS.has(initialMood) ? initialMood : 'love';
     const clientData = {
       socketId,
       nickname,
       avatar,
-      mood: initialMood || 'love',
+      mood,
       joinedAt: Date.now()
     };
     this.clients.set(socketId, clientData);
@@ -30,18 +33,16 @@ class PresenceService {
   }
 
   removeClient(socketId) {
-    const client = this.clients.get(socketId);
+    const client = this.clients.get(socketId) || null;
     this.clients.delete(socketId);
     return client;
   }
 
   updateClientMood(socketId, mood) {
     const client = this.clients.get(socketId);
-    if (client) {
-      client.mood = mood;
-      return client;
-    }
-    return null;
+    if (!client) return null;
+    client.mood = VALID_MOODS.has(mood) ? mood : 'love';
+    return client;
   }
 
   getClient(socketId) {
@@ -49,11 +50,7 @@ class PresenceService {
   }
 
   getStats() {
-    const realCount = this.clients.size;
-    const total = BASE_LISTENERS + realCount;
-
-    // Calculate real mood distribution
-    const moodCounts = {
+    const moods = {
       love: 0,
       dard: 0,
       sukoon: 0,
@@ -62,31 +59,16 @@ class PresenceService {
       'late-night': 0
     };
 
-    // Distribute base listeners proportionally
-    const baseDistribution = {
-      love: Math.round(BASE_LISTENERS * 0.28),
-      dard: Math.round(BASE_LISTENERS * 0.19),
-      sukoon: Math.round(BASE_LISTENERS * 0.22),
-      safar: Math.round(BASE_LISTENERS * 0.12),
-      happy: Math.round(BASE_LISTENERS * 0.10),
-      'late-night': Math.round(BASE_LISTENERS * 0.09)
-    };
-
-    Object.assign(moodCounts, baseDistribution);
-
-    // Add active real clients
     for (const client of this.clients.values()) {
-      if (moodCounts[client.mood] !== undefined) {
-        moodCounts[client.mood]++;
-      } else {
-        moodCounts.love++;
-      }
+      const mood = VALID_MOODS.has(client.mood) ? client.mood : 'love';
+      moods[mood]++;
     }
 
+    const total = this.clients.size;
     return {
       total,
-      realConnected: realCount,
-      moods: moodCounts
+      realConnected: total,
+      moods
     };
   }
 }
