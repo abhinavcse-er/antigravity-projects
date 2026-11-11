@@ -6,8 +6,9 @@
 const MehfilAPI = (function () {
     "use strict";
 
-    // Base URL defaults to current host
-    const BASE_URL = window.location.origin + "/api";
+    
+   // Render backend API
+const BASE_URL = "https://mehfil-backend-ing6.onrender.com/api";
 
     // Persistent User ID for favorites and identities
     let userId = localStorage.getItem("mehfil_user_id");
