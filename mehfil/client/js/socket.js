@@ -169,8 +169,13 @@ const MehfilSocket = (function () {
         });
 
         const extraEl = document.getElementById("extraListeners");
+        const avatarSlots = document.querySelectorAll(".listener-avatars > div");
+        avatarSlots.forEach((slot, index) => {
+            slot.style.display = index < Math.min(total, 7) ? "" : "none";
+        });
         if (extraEl) {
             extraEl.textContent = "+" + Math.max(0, total - 7).toLocaleString();
+            extraEl.style.display = total > 7 ? "" : "none";
         }
 
         if (stats.moods) {
