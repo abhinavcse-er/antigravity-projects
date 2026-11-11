@@ -85,7 +85,8 @@ const MehfilAudioPlayer = (function () {
 
         if (event.data === window.YT.PlayerState.PLAYING) {
             isPlaying = true;
-            triedBackup = false; // Reset on successful play
+            triedBackup = false;
+            errorRecoveryInProgress = false; // A playable source was found
             updatePlayPauseUI(true);
             startProgressLoop();
         } else if (event.data === window.YT.PlayerState.PAUSED) {
@@ -111,7 +112,9 @@ const MehfilAudioPlayer = (function () {
         // If song has a backup ID and we haven't tried it yet, try the backup stream!
         if (currentSong && currentSong.backupId && currentSong.backupId !== currentSong.youtubeId && !triedBackup) {
             triedBackup = true;
-            console.log(`[PLAYER] Seamlessly switching to alternative source for "${currentSong.title}"...`);
+            // Allow the backup video's own error event to enter recovery too.
+            errorRecoveryInProgress = false;
+            console.log(`[PLAYER] Trying backup source for "${currentSong.title}"...`);
             if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
                 ytPlayer.loadVideoById({
                     videoId: currentSong.backupId,
