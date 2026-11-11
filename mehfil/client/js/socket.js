@@ -246,3 +246,7 @@ const MehfilSocket = (function () {
         })
     };
 })();
+
+// app.js checks the browser global before starting realtime presence.
+// Expose the manager so the heartbeat and live-count UI actually initialize.
+window.MehfilSocket = MehfilSocket;
