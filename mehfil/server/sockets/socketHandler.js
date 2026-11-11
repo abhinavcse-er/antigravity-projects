@@ -17,7 +17,8 @@ function schedulePresenceBroadcast(io) {
 function setupSockets(io) {
   io.on('connection', (socket) => {
     const initialMood = socket.handshake.query.mood || 'love';
-    const client = presenceService.addClient(socket.id, initialMood);
+    const clientKey = socket.handshake.auth?.userId || socket.handshake.query.userId || socket.id;
+    const client = presenceService.addClient(socket.id, initialMood, clientKey);
 
     // The joining client receives its own current snapshot in the welcome event.
     socket.emit('presence:welcome', {
