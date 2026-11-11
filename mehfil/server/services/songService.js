@@ -39,10 +39,12 @@ function normalize(value) {
     .trim();
 }
 
-function scoreResult(query, title, artist) {
+function scoreResult(query, title, artist, description = '') {
   const q = normalize(query);
   const t = normalize(title);
   const a = normalize(artist);
+  const d = normalize(description);
+  const searchable = `${t} ${a} ${d}`;
   if (!q || !t) return 0;
 
   let score = 0;
@@ -56,8 +58,10 @@ function scoreResult(query, title, artist) {
   if (tokens.length) {
     const titleHits = tokens.filter(token => t.includes(token)).length;
     const artistHits = tokens.filter(token => a.includes(token)).length;
+    const metadataHits = tokens.filter(token => searchable.includes(token)).length;
     score += Math.round((titleHits / tokens.length) * 48);
     score += Math.round((artistHits / tokens.length) * 24);
+    score += Math.round((metadataHits / tokens.length) * 20);
   }
 
   const requested = q;
@@ -152,7 +156,8 @@ class SongService {
 
               const title = String(item.snippet?.title || '').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
               const artist = item.snippet?.channelTitle || 'Unknown artist';
-              const score = scoreResult(query, title, artist);
+              const description = item.snippet?.description || '';
+              const score = scoreResult(query, title, artist, description);
               if (score < 18) return null;
 
               return {
