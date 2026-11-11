@@ -102,9 +102,19 @@
         let requestVersion = 0;
         let suggestionSongs = [];
         let activeIndex = -1;
+        const searchButtonMarkup = button?.innerHTML || "";
+        const setSearchBusy = (busy) => {
+            if (!button) return;
+            button.disabled = busy;
+            button.innerHTML = busy
+                ? '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>Searching</span>'
+                : searchButtonMarkup;
+        };
 
         const closeSuggestions = () => {
             requestVersion++;
+            clearTimeout(debounceTimer);
+            setSearchBusy(false);
             suggestions.hidden = true;
             suggestions.innerHTML = "";
             suggestionSongs = [];
@@ -138,6 +148,7 @@
                 return;
             }
 
+            const fragment = document.createDocumentFragment();
             songs.forEach((song, index) => {
                 const item = document.createElement("button");
                 item.type = "button";
@@ -150,6 +161,7 @@
                     cover.src = song.cover;
                     cover.alt = "";
                     cover.loading = "lazy";
+                    cover.decoding = "async";
                     item.appendChild(cover);
                 }
 
@@ -164,23 +176,30 @@
 
                 item.addEventListener("mousedown", event => event.preventDefault());
                 item.addEventListener("click", () => playSelectedSong(song));
-                suggestions.appendChild(item);
+                fragment.appendChild(item);
             });
+            suggestions.appendChild(fragment);
 
             suggestions.hidden = false;
             input.setAttribute("aria-expanded", "true");
         };
 
         const searchSuggestions = async (query) => {
+            const normalizedQuery = String(query || "").trim().replace(/\\s+/g, " ");
+            if (normalizedQuery.length < 2) return;
             const version = ++requestVersion;
+            setSearchBusy(true);
             try {
-                const songs = await MehfilAPI.getSongs({ search: query, mood: "all", limit: 8 });
-                if (version !== requestVersion || input.value.trim() !== query) return;
+                const songs = await MehfilAPI.getSongs({ search: normalizedQuery, mood: "all", limit: 8 });
+                const currentQuery = input.value.trim().replace(/\\s+/g, " ");
+                if (version !== requestVersion || currentQuery !== normalizedQuery) return;
                 renderSuggestions(Array.isArray(songs) ? songs.slice(0, 8) : []);
             } catch (error) {
                 if (version !== requestVersion) return;
                 console.error("[MEHFIL] Suggestions failed:", error);
                 renderSuggestions([]);
+            } finally {
+                if (version === requestVersion) setSearchBusy(false);
             }
         };
 
@@ -191,7 +210,7 @@
 
         input.addEventListener("input", () => {
             requestVersion++;
-            const query = input.value.trim();
+            const query = input.value.trim().replace(/\\s+/g, " ");
             clearTimeout(debounceTimer);
             suggestionSongs = [];
             activeIndex = -1;
@@ -217,16 +236,8 @@
                 activeIndex = activeIndex <= 0 ? items.length - 1 : activeIndex - 1;
             } else if (event.key === "Enter" && items.length) {
                 event.preventDefault();
-                if (activeIndex >= 0) {
-                    playSelectedSong(suggestionSongs[activeIndex]);
-                } else {
-                    activeIndex = 0;
-                    items.forEach((item, index) => {
-                        item.classList.toggle("active", index === 0);
-                        item.setAttribute("aria-selected", String(index === 0));
-                    });
-                    items[0].scrollIntoView({ block: "nearest" });
-                }
+                const selectedIndex = activeIndex >= 0 ? activeIndex : 0;
+                playSelectedSong(suggestionSongs[selectedIndex]);
             } else if (event.key === "Escape") {
                 closeSuggestions();
             } else {
@@ -240,7 +251,7 @@
 
         form.addEventListener("submit", event => {
             event.preventDefault();
-            const query = input.value.trim();
+            const query = input.value.trim().replace(/\\s+/g, " ");
             if (!query) {
                 input.focus();
                 window.showMehfilToast("Enter a song or artist name first.");
@@ -249,14 +260,7 @@
             if (activeIndex >= 0 && suggestionSongs[activeIndex]) {
                 playSelectedSong(suggestionSongs[activeIndex]);
             } else if (suggestionSongs.length) {
-                activeIndex = 0;
-                const first = suggestions.querySelector(".mehfil-suggestion");
-                if (first) {
-                    first.classList.add("active");
-                    first.setAttribute("aria-selected", "true");
-                    first.scrollIntoView({ block: "nearest" });
-                }
-                window.showMehfilToast("Choose a song from the suggestions to play it.");
+                playSelectedSong(suggestionSongs[0]);
             } else {
                 searchSuggestions(query);
             }
@@ -813,7 +817,7 @@
                 const isFav = state.favoriteSongIds.has(song.id);
                 row.innerHTML = `
                     <div class="song-item-info">
-                        <img class="song-item-cover" src="${song.cover || 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=100'}" alt="${song.title}">
+                        <img class="song-item-cover" src="${song.cover || 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=100'}" alt="${song.title}" loading="lazy" decoding="async">
                         <div class="song-item-meta">
                             <div class="song-item-title">${song.title}</div>
                             <div class="song-item-artist">${song.artist} • <span style="text-transform: capitalize; color: var(--accent);">${song.mood}</span></div>
@@ -989,7 +993,7 @@
                 row.className = "song-item-row";
                 row.innerHTML = `
                     <div class="song-item-info">
-                        <img class="song-item-cover" src="${song.cover || ''}" alt="${song.title}">
+                        <img class="song-item-cover" src="${song.cover || ''}" alt="${song.title}" loading="lazy" decoding="async">
                         <div class="song-item-meta">
                             <div class="song-item-title">${song.title}</div>
                             <div class="song-item-artist">${song.artist} • <span style="text-transform:capitalize; color:var(--accent);">${song.mood}</span></div>
