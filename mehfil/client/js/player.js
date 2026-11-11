@@ -14,6 +14,7 @@ const MehfilAudioPlayer = (function () {
     let isMuted = false;
     let progressTimer = null;
     let triedBackup = false;
+    let errorRecoveryInProgress = false;
     let hasUserInteracted = false;
 
     // Track user gesture to satisfy browser autoplay policy
@@ -103,10 +104,12 @@ const MehfilAudioPlayer = (function () {
 
     function onPlayerError(event) {
         const errorCode = event.data || event;
-        console.warn(`[PLAYER] Notice: Track source restricted (Code ${errorCode}). Resolving...`);
+        if (errorRecoveryInProgress) return;
+        errorRecoveryInProgress = true;
+        console.warn(`[PLAYER] YouTube rejected this video (code ${errorCode}); trying recovery.`);
 
         // If song has a backup ID and we haven't tried it yet, try the backup stream!
-        if (currentSong && currentSong.backupId && !triedBackup) {
+        if (currentSong && currentSong.backupId && currentSong.backupId !== currentSong.youtubeId && !triedBackup) {
             triedBackup = true;
             console.log(`[PLAYER] Seamlessly switching to alternative source for "${currentSong.title}"...`);
             if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
@@ -119,7 +122,10 @@ const MehfilAudioPlayer = (function () {
         }
 
         // Otherwise smoothly advance to next song without alarming the user
+        // The video cannot be embedded (for example YouTube error 150).
+        // Skip it once; the next track gets a fresh recovery state.
         setTimeout(() => {
+            errorRecoveryInProgress = false;
             if (typeof window.onSongEnded === "function") {
                 window.onSongEnded();
             }
@@ -129,6 +135,7 @@ const MehfilAudioPlayer = (function () {
     function loadSong(song, autoPlay = true, seekSeconds = 0) {
         currentSong = song;
         triedBackup = false;
+        errorRecoveryInProgress = false;
         if (!song) return;
 
         console.log(`[PLAYER] Tuning into: "${song.title}" - ${song.artist}`);
