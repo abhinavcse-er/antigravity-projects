@@ -49,8 +49,8 @@ const MehfilAudioPlayer = (function () {
             width: "100%",
             playerVars: {
                 autoplay: 0,
-                controls: 0,
-                disablekb: 1,
+                controls: 1,
+                disablekb: 0,
                 fs: 0,
                 modestbranding: 1,
                 rel: 0,
@@ -76,7 +76,9 @@ const MehfilAudioPlayer = (function () {
 
         // If a song was queued before player was ready
         if (currentSong) {
-            loadSong(currentSong, isPlaying);
+            // A delayed iframe-ready callback cannot reuse the original mobile tap.
+            // Cue the selected track and let the user start it with a fresh tap.
+            loadSong(currentSong, false);
         }
     }
 
@@ -163,20 +165,26 @@ const MehfilAudioPlayer = (function () {
                 updatePlayPauseUI(false);
             }
         } else {
-            setTimeout(() => {
-                if (ytReady) loadSong(song, autoPlay, seekSeconds);
-            }, 500);
+            // Keep the selected track queued; onPlayerReady() will cue it once
+            // the official YouTube iframe has finished loading.
+            updatePlayPauseUI(false);
         }
     }
 
     function play() {
         hasUserInteracted = true;
-        if (ytPlayer && typeof ytPlayer.playVideo === "function") {
-            ytPlayer.playVideo();
-            isPlaying = true;
-            updatePlayPauseUI(true);
-            startProgressLoop();
+        if (!ytReady || !ytPlayer || typeof ytPlayer.playVideo !== "function") {
+            updatePlayPauseUI(false);
+            if (typeof window.showMehfilToast === "function") {
+                window.showMehfilToast("Player is still loading. Please tap Play again in a moment.");
+            }
+            return;
         }
+
+        ytPlayer.playVideo();
+        isPlaying = true;
+        updatePlayPauseUI(true);
+        startProgressLoop();
     }
 
     function pause() {
