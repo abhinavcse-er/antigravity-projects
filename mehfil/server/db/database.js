@@ -6,8 +6,20 @@ let db = null;
 let isNativeSqlite = false;
 let memoryStore = null;
 
-const dbFilePath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : path.join(__dirname, 'mehfil.db');
-const jsonBackupPath = path.join(__dirname, 'mehfil-store.json');
+const defaultDbFilePath = path.join(__dirname, 'mehfil.db');
+const dbFilePath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : defaultDbFilePath;
+const jsonBackupPath = process.env.DB_PATH
+  ? path.join(path.dirname(dbFilePath), 'mehfil-store.json')
+  : path.join(__dirname, 'mehfil-store.json');
+
+if (process.env.DB_PATH) {
+  fs.mkdirSync(path.dirname(dbFilePath), { recursive: true });
+  // Preserve an existing local SQLite file when moving to a newly mounted disk.
+  if (dbFilePath !== defaultDbFilePath && !fs.existsSync(dbFilePath) && fs.existsSync(defaultDbFilePath)) {
+    fs.copyFileSync(defaultDbFilePath, dbFilePath);
+    console.log('[DB] Copied the existing SQLite database to the configured persistent path.');
+  }
+}
 
 // Initialize database
 function initDatabase() {
