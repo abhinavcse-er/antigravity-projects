@@ -62,6 +62,7 @@
 
         // Attach UI Listeners
         attachMoodListeners();
+        attachQuickSongSearch();
         attachPlayerControls();
         attachNavigationModals();
         attachKeyboardShortcuts();
@@ -88,6 +89,47 @@
         if (surpriseBtn) {
             surpriseBtn.addEventListener("click", handleSurpriseMe);
         }
+    }
+
+    function attachQuickSongSearch() {
+        const form = $("quickSongSearch");
+        const input = $("quickSongSearchInput");
+        const button = $("quickSongSearchButton");
+        if (!form || !input) return;
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const query = input.value.trim();
+            if (!query) {
+                input.focus();
+                window.showMehfilToast("Enter a song or artist name first.");
+                return;
+            }
+
+            if (button) button.disabled = true;
+            const originalLabel = button ? button.innerHTML : "";
+            if (button) button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Searching</span>';
+
+            try {
+                const results = await MehfilAPI.getSongs({ search: query, mood: "all", limit: 10 });
+                if (!Array.isArray(results) || !results.length) {
+                    window.showMehfilToast("No matching songs found. Try another search.");
+                    return;
+                }
+                state.songs = results;
+                state.currentIndex = 0;
+                playSongAtIndex(0, true);
+                window.showMehfilToast("Playing: " + results[0].title);
+            } catch (error) {
+                console.error("[MEHFIL] Song search failed:", error);
+                window.showMehfilToast("Song search failed. Please try again.");
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = originalLabel;
+                }
+            }
+        });
     }
 
     async function switchMood(mood, autoPlay = true) {
