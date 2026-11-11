@@ -6,7 +6,7 @@ let db = null;
 let isNativeSqlite = false;
 let memoryStore = null;
 
-const dbFilePath = path.join(__dirname, 'mehfil.db');
+const dbFilePath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : path.join(__dirname, 'mehfil.db');
 const jsonBackupPath = path.join(__dirname, 'mehfil-store.json');
 
 // Initialize database

@@ -106,3 +106,14 @@ The application will start on **http://localhost:3000**.
 | `R` | Toggle Repeat |
 | `1` – `6` | Switch Mood (1=Love, 2=Dard, 3=Sukoon, 4=Safar, 5=Happy, 6=Late Night) |
 | `Esc` | Close any active modal dialog |
+
+
+## Persistent database storage (Render)
+
+MEHFIL uses SQLite for its current single-instance deployment. To keep community posts, requests, and favorites across redeploys, attach a Render Persistent Disk to the backend service and mount it at `/var/data`. Then set the service environment variable:
+
+```env
+DB_PATH=/var/data/mehfil.db
+```
+
+Deploy after attaching the disk. Do not point `DB_PATH` at the repository checkout when you need data to survive deploys. This single-instance SQLite setup is appropriate for the initial 1,000-listener target only after load testing; multiple backend instances need a shared database and shared presence store.
