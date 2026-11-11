@@ -3263,51 +3263,39 @@ body:not(.is-playing) .audio-wave span {
 
 
 /* =========================================================
-   YOUTUBE ENGINE
-   IMPORTANT:
-   No visible YouTube black box.
+   YOUTUBE PLAYER SURFACE
+   Keep the official iframe visible and touch-accessible.
    ========================================================= */
 
-.youtube-engine {
-
-    position:
-        fixed;
-
-    width:
-        1px;
-
-    height:
-        1px;
-
-    left:
-        -9999px;
-
-    top:
-        -9999px;
-
-    overflow:
-        hidden;
-
-    opacity:
-        0;
-
-    pointer-events:
-        none;
-
+.album-cover {
+    position: relative;
+    width: 200px;
+    min-width: 200px;
+    height: 200px;
+    min-height: 200px;
+    aspect-ratio: 1 / 1;
 }
 
+.youtube-player-surface {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: 100%;
+    height: 100%;
+    min-width: 200px;
+    min-height: 200px;
+    overflow: hidden;
+    border-radius: inherit;
+    background: #08090b;
+}
 
-.youtube-engine iframe {
-
-    width:
-        1px !important;
-
-    height:
-        1px !important;
-
-    border:
-        0;
-
+.youtube-player-surface iframe {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 200px;
+    min-height: 200px;
+    border: 0;
 }
 
 
@@ -3321,7 +3309,7 @@ body:not(.is-playing) .audio-wave span {
         fixed;
 
     z-index:
-        100;
+        1200;
 
     inset:
         0;
@@ -3350,7 +3338,8 @@ body:not(.is-playing) .audio-wave span {
 }
 
 
-.mobile-menu.open {
+.mobile-menu.open,
+.mobile-menu.active {
 
     display:
         flex;
@@ -4802,11 +4791,27 @@ body.mood-changing .background-image {
     }
 
     .menu-button {
-        flex: 0 0 38px;
-        width: 38px;
-        min-width: 38px;
-        min-height: 38px;
+        position: relative;
+        z-index: 1201;
+        flex: 0 0 42px;
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        min-height: 42px;
         padding: 0;
+        touch-action: manipulation;
+    }
+
+    .mobile-menu {
+        padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .mobile-menu a,
+    .mobile-menu .close-menu {
+        min-height: 48px;
+        touch-action: manipulation;
     }
 
     .main {
@@ -4882,8 +4887,11 @@ body.mood-changing .background-image {
     }
 
     .album-cover {
-        width: min(38vw, 118px);
-        max-width: 118px;
+        width: min(100%, 220px);
+        min-width: 200px;
+        max-width: 220px;
+        height: 200px;
+        min-height: 200px;
         margin-inline: auto;
     }
 
