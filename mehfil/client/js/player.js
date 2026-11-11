@@ -112,8 +112,9 @@ const MehfilAudioPlayer = (function () {
         // If song has a backup ID and we haven't tried it yet, try the backup stream!
         if (currentSong && currentSong.backupId && currentSong.backupId !== currentSong.youtubeId && !triedBackup) {
             triedBackup = true;
-            // Keep recovery locked while the backup is tested. This prevents
-            // duplicate YouTube error callbacks from skipping multiple tracks.
+            // Let exactly one error from the backup source enter recovery.
+            // Once that fails, the recovery lock stays set until the next track.
+            errorRecoveryInProgress = false;
             console.log(`[PLAYER] Trying backup source for "${currentSong.title}"...`);
             if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
                 ytPlayer.loadVideoById({
