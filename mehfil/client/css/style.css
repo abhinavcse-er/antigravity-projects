@@ -4790,3 +4790,334 @@ body { width: 100%; max-width: 100%; }
   .background-image, .audio-wave span, .live-dot, .live-pulse { animation: none !important; }
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+
+/* =========================================================
+   PERFORMANCE + MOBILE FIT PASS
+   ========================================================= */
+
+.particles.is-paused .particle {
+    animation-play-state: paused !important;
+}
+
+@media (max-width: 900px) {
+    .main {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .right-sidebar,
+    .center-content,
+    .mood-sidebar {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .player-card,
+    .live-panel,
+    .mehfil-quick-search {
+        max-width: 100%;
+    }
+
+    .live-panel {
+        overflow: hidden;
+    }
+}
+
+@media (max-width: 600px) {
+    body {
+        overflow-x: hidden;
+    }
+
+    .header {
+        display: flex;
+        width: calc(100% - 24px);
+        min-height: 64px;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .brand {
+        flex: 1 1 auto;
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .brand-text {
+        min-width: 0;
+    }
+
+    .brand-text h1 {
+        font-size: clamp(19px, 6vw, 23px);
+        letter-spacing: 1.5px;
+    }
+
+    .brand-text p,
+    .mode-toggle-btn,
+    .header-divider,
+    .header-live .listener-icon {
+        display: none !important;
+    }
+
+    .header-live {
+        flex: 0 0 auto;
+        margin-left: auto;
+        padding: 7px 9px;
+        gap: 7px;
+        font-size: 11px;
+    }
+
+    .header-live strong {
+        font-size: 12px;
+    }
+
+    .menu-button {
+        flex: 0 0 38px;
+        width: 38px;
+        min-width: 38px;
+        min-height: 38px;
+        padding: 0;
+    }
+
+    .main {
+        display: flex;
+        flex-direction: column;
+        width: calc(100% - 24px);
+        gap: 14px;
+    }
+
+    .mood-sidebar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+        padding: 10px;
+    }
+
+    .sidebar-title,
+    .surprise-button {
+        grid-column: 1 / -1;
+    }
+
+    .mood-button {
+        min-width: 0;
+        min-height: 68px;
+        padding: 8px 4px;
+        margin: 0;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        transform: none !important;
+    }
+
+    .mood-name {
+        max-width: 100%;
+        font-size: 10px;
+        overflow-wrap: anywhere;
+    }
+
+    .center-content {
+        padding: 8px 0 4px;
+    }
+
+    .mood-intro {
+        padding: 0;
+        text-align: center;
+    }
+
+    .mood-intro h2 {
+        font-size: clamp(46px, 15vw, 72px);
+        line-height: 1;
+        letter-spacing: -2px;
+        overflow-wrap: anywhere;
+    }
+
+    .mood-intro p {
+        max-width: 32ch;
+        margin: 10px auto 0;
+        font-size: 15px;
+    }
+
+    .audio-wave {
+        height: 34px;
+        margin: 14px 0;
+        justify-content: center;
+    }
+
+    .player-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        gap: 12px;
+        padding: 13px;
+    }
+
+    .album-cover {
+        width: min(38vw, 118px);
+        max-width: 118px;
+        margin-inline: auto;
+    }
+
+    .track-section {
+        width: 100%;
+        min-width: 0;
+        text-align: center;
+    }
+
+    .track-section h3,
+    .track-section > p {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    .track-meta,
+    .player-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .progress-container {
+        width: 100%;
+        text-align: left;
+    }
+
+    .live-message {
+        margin: 12px 0;
+        text-align: center;
+        line-height: 1.5;
+    }
+
+    .right-sidebar {
+        width: 100%;
+        margin: 0 0 14px;
+    }
+
+    .live-panel {
+        width: 100%;
+        padding: 15px;
+    }
+
+    .quick-reactions {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 9px;
+    }
+
+    .quick-reactions .reaction-btn {
+        flex: 1 1 38px;
+        min-width: 36px;
+        min-height: 40px;
+        padding: 5px;
+    }
+
+    .creator-credit {
+        width: calc(100% - 24px);
+        margin: 12px auto 112px;
+        flex-wrap: wrap;
+    }
+
+    .bottom-player {
+        position: fixed;
+        z-index: 950;
+        left: 50%;
+        bottom: calc(7px + env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        width: calc(100% - 16px);
+        max-width: 560px;
+        min-width: 0;
+        min-height: 62px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 15px;
+    }
+
+    .bottom-track {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .bottom-track strong,
+    .bottom-track small {
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .bottom-controls {
+        min-width: 0;
+        gap: 4px;
+    }
+
+    .bottom-controls button:not(.bottom-play),
+    .volume-area,
+    .bottom-listeners,
+    .collapse-player {
+        display: none !important;
+    }
+
+    .bottom-controls .bottom-play {
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+    }
+
+    .app {
+        padding-bottom: calc(100px + env(safe-area-inset-bottom));
+    }
+
+    .background-image {
+        animation: none;
+        transform: none;
+        filter: brightness(.34) saturate(1.05);
+    }
+
+    .mehfil-quick-search,
+    .live-panel,
+    .player-card,
+    .mood-sidebar,
+    .bottom-player {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+
+@media (max-width: 380px) {
+    .mood-sidebar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mood-intro h2 {
+        font-size: clamp(44px, 14vw, 58px);
+    }
+
+    .header-live {
+        padding: 6px 7px;
+    }
+
+    .bottom-player {
+        width: calc(100% - 12px);
+        padding: 7px 8px;
+    }
+
+    .bottom-track strong {
+        max-width: 180px;
+    }
+
+    .creator-credit-copy p {
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .background-image,
+    .particle,
+    .live-dot,
+    .live-pulse,
+    .audio-wave span {
+        animation: none !important;
+    }
+}
