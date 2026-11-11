@@ -6252,6 +6252,7 @@ body.mood-changing .background-image {
   max-width: none; aspect-ratio: 1 / 1; transform: none;
   border: 0; border-radius: inherit; box-shadow: none; opacity: .015;
 }
+.youtube-player-surface, .youtube-player-surface iframe { pointer-events: none; }
 .youtube-player-surface iframe { width: 100% !important; height: 100% !important; border: 0; }
 .mehfil-quick-search { position: relative; z-index: 30; }
 .mehfil-search-suggestions { z-index: 80; overscroll-behavior: contain; scrollbar-width: thin; }

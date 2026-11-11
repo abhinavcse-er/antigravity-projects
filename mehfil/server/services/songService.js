@@ -194,7 +194,7 @@ class SongService {
           const unique = [];
           const seen = new Set();
           for (const song of ranked) {
-            const key = song.youtubeId || normalize(song.title);
+            const key = normalize(song.title);
             if (seen.has(key)) continue;
             seen.add(key);
             delete song.searchScore;
