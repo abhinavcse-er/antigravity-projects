@@ -735,10 +735,27 @@
         const mobileMenu = $("mobileMenu");
         const closeMenu = $("closeMenu");
         if (menuBtn && mobileMenu) {
-            menuBtn.addEventListener("click", () => mobileMenu.classList.add("active"));
-        }
-        if (closeMenu && mobileMenu) {
-            closeMenu.addEventListener("click", () => mobileMenu.classList.remove("active"));
+            menuBtn.setAttribute("aria-expanded", "false");
+            const closeMobileMenu = () => {
+                mobileMenu.classList.remove("open");
+                menuBtn.setAttribute("aria-expanded", "false");
+            };
+
+            menuBtn.addEventListener("click", () => {
+                const isOpen = mobileMenu.classList.toggle("open");
+                menuBtn.setAttribute("aria-expanded", String(isOpen));
+            });
+
+            if (closeMenu) closeMenu.addEventListener("click", closeMobileMenu);
+            mobileMenu.querySelectorAll("a").forEach(link => {
+                link.addEventListener("click", closeMobileMenu);
+            });
+            mobileMenu.addEventListener("click", event => {
+                if (event.target === mobileMenu) closeMobileMenu();
+            });
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape") closeMobileMenu();
+            });
         }
     }
 
@@ -751,7 +768,7 @@
     function closeModal() {
         document.querySelectorAll(".mehfil-modal-overlay").forEach(m => m.classList.remove("active"));
         const mobileMenu = $("mobileMenu");
-        if (mobileMenu) mobileMenu.classList.remove("active");
+        if (mobileMenu) mobileMenu.classList.remove("open");
     }
 
     /* EXPLORE DATA */
