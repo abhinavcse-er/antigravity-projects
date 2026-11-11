@@ -5385,3 +5385,471 @@ body.mood-changing .background-image {
         transform: none;
     }
 }
+
+
+/* =========================================================
+   MEHFIL — FINAL RESPONSIVE OVERRIDES
+   One authoritative pass after legacy breakpoint rules.
+   ========================================================= */
+@media (max-width: 900px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: clip;
+    }
+
+    .app {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+
+    .header,
+    .main {
+        box-sizing: border-box;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .main {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    .mood-sidebar,
+    .center-content,
+    .right-sidebar,
+    .live-panel,
+    .player-card,
+    .track-section {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .mood-sidebar {
+        position: static;
+    }
+
+    .right-sidebar {
+        margin-inline: 0;
+    }
+
+    .live-panel {
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
+    .mehfil-quick-search {
+        position: relative;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .mehfil-search-suggestions {
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        max-height: min(46dvh, 340px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        z-index: 100;
+    }
+
+    .mehfil-suggestion,
+    .mehfil-suggestion-details {
+        min-width: 0;
+    }
+
+    .track-section h3,
+    .track-section > p,
+    #lyricsSnippet,
+    .bottom-track strong,
+    .bottom-track small {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 600px) {
+    .header {
+        display: flex;
+        align-items: center;
+        width: calc(100% - 20px);
+        min-height: 62px;
+        margin-inline: auto;
+        padding-top: env(safe-area-inset-top);
+        gap: 8px;
+    }
+
+    .brand {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .brand-text {
+        min-width: 0;
+    }
+
+    .brand-text h1 {
+        font-size: clamp(18px, 5.5vw, 23px);
+        letter-spacing: 1.4px;
+    }
+
+    .brand-text p,
+    .mode-toggle-btn,
+    .header-divider,
+    .header-live .listener-icon {
+        display: none !important;
+    }
+
+    .header-live {
+        flex: 0 0 auto;
+        margin-left: auto;
+        padding: 7px 8px;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .menu-button {
+        display: inline-flex;
+        flex: 0 0 42px;
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        min-height: 42px;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 1201;
+    }
+
+    .main {
+        width: calc(100% - 20px);
+        margin-inline: auto;
+        gap: 13px;
+    }
+
+    .mood-sidebar {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+        padding: 10px;
+    }
+
+    .sidebar-title,
+    .surprise-button {
+        grid-column: 1 / -1;
+    }
+
+    .mood-button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        min-height: 64px;
+        margin: 0;
+        padding: 7px 3px;
+        gap: 4px;
+        transform: none !important;
+    }
+
+    .mood-name {
+        max-width: 100%;
+        font-size: clamp(9px, 2.8vw, 11px);
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    .center-content {
+        padding: 4px 0;
+    }
+
+    .mehfil-quick-search {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 7px 8px 7px 12px;
+        margin-bottom: 14px;
+    }
+
+    .mehfil-quick-search input {
+        display: block;
+        flex: 1 1 0%;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        font-size: 14px;
+    }
+
+    .mehfil-quick-search button {
+        flex: 0 0 auto;
+        min-width: 42px;
+        min-height: 42px;
+        padding: 8px 10px;
+        white-space: nowrap;
+    }
+
+    .mehfil-search-suggestions {
+        max-height: min(42dvh, 310px);
+        padding: 6px;
+    }
+
+    .mehfil-suggestion {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 56px;
+        padding: 7px;
+    }
+
+    .mehfil-suggestion img {
+        flex: 0 0 42px;
+        width: 42px;
+        height: 42px;
+        object-fit: cover;
+    }
+
+    .mehfil-suggestion-details {
+        flex: 1 1 0%;
+        min-width: 0;
+    }
+
+    .mehfil-suggestion-details strong,
+    .mehfil-suggestion-details small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .mood-intro {
+        padding-inline: 2px;
+        text-align: center;
+    }
+
+    .mood-intro h2 {
+        font-size: clamp(40px, 13vw, 64px);
+        line-height: 1.04;
+        letter-spacing: -1.5px;
+        overflow-wrap: anywhere;
+    }
+
+    .mood-intro p {
+        max-width: 32ch;
+        margin-inline: auto;
+        font-size: 14px;
+    }
+
+    .player-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .album-cover {
+        width: min(62vw, 210px);
+        min-width: 0;
+        max-width: 210px;
+        height: auto;
+        min-height: 0;
+        aspect-ratio: 1;
+        margin-inline: auto;
+    }
+
+    .youtube-player-surface {
+        max-width: 100%;
+    }
+
+    .track-section {
+        text-align: center;
+    }
+
+    .track-section h3 {
+        font-size: clamp(19px, 5.5vw, 25px);
+        line-height: 1.2;
+    }
+
+    .track-meta,
+    .player-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .player-controls button,
+    .favorite-button,
+    .quick-reactions .reaction-btn {
+        min-width: 42px;
+        min-height: 42px;
+    }
+
+    .progress-container {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .right-sidebar {
+        margin: 0 0 12px;
+    }
+
+    .live-panel {
+        padding: 14px;
+    }
+
+    .quick-reactions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 6px;
+    }
+
+    .quick-reactions .reaction-btn {
+        flex: 1 1 38px;
+    }
+
+    .bottom-player {
+        position: fixed;
+        z-index: 950;
+        left: 50%;
+        right: auto;
+        bottom: max(7px, env(safe-area-inset-bottom));
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        width: calc(100% - 16px);
+        max-width: 560px;
+        min-width: 0;
+        min-height: 60px;
+        padding: 7px 9px;
+        transform: translateX(-50%);
+    }
+
+    .bottom-radio,
+    .bottom-listeners,
+    .volume-area,
+    .collapse-player,
+    .bottom-controls button:not(.bottom-play) {
+        display: none !important;
+    }
+
+    .bottom-track {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 8px;
+        overflow: hidden;
+    }
+
+    .bottom-cover {
+        flex: 0 0 42px;
+        width: 42px;
+        height: 42px;
+    }
+
+    .bottom-track > div:last-child {
+        flex: 1 1 0%;
+        min-width: 0;
+    }
+
+    .bottom-track strong,
+    .bottom-track small {
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .bottom-controls {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 0;
+        gap: 3px;
+    }
+
+    .bottom-controls .bottom-play {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        min-height: 42px;
+    }
+
+    .app {
+        padding-bottom: calc(108px + env(safe-area-inset-bottom));
+    }
+
+    .creator-credit {
+        width: calc(100% - 20px);
+        margin: 12px auto 14px;
+        flex-wrap: wrap;
+    }
+
+    .creator-credit-copy {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+}
+
+@media (max-width: 380px) {
+    .header,
+    .main {
+        width: calc(100% - 16px);
+    }
+
+    .mood-sidebar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mehfil-quick-search button span {
+        display: none;
+    }
+
+    .mehfil-quick-search button {
+        min-width: 42px;
+        padding-inline: 9px;
+    }
+
+    .bottom-player {
+        width: calc(100% - 12px);
+        padding-inline: 7px;
+    }
+}
+
+@media (max-width: 340px) {
+    .header-live {
+        display: none;
+    }
+
+    .mood-sidebar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .bottom-track strong {
+        max-width: 145px;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    button,
+    a,
+    input,
+    .mehfil-suggestion {
+        touch-action: manipulation;
+    }
+}
