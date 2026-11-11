@@ -1,11 +1,11 @@
 const db = require('../db/database');
 const config = require('../config');
 
-// Short-lived, bounded cache prevents repeated YouTube API calls for the same search.
+// Short-lived cache + in-flight deduplication protects the YouTube API quota.
 const searchCache = new Map();
 const pendingSearches = new Map();
-const CACHE_TTL_MS = 60 * 1000;
-const CACHE_MAX_ENTRIES = 200;
+const CACHE_TTL_MS = 2 * 60 * 1000;
+const CACHE_MAX_ENTRIES = 150;
 
 function cacheSearch(key, results) {
   if (searchCache.size >= CACHE_MAX_ENTRIES) {
@@ -28,6 +28,53 @@ async function fetchJson(url, timeoutMs = 8000) {
   }
 }
 
+function normalize(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function scoreResult(query, title, artist) {
+  const q = normalize(query);
+  const t = normalize(title);
+  const a = normalize(artist);
+  if (!q || !t) return 0;
+
+  let score = 0;
+  if (t === q) score += 120;
+  else if (t.startsWith(q)) score += 95;
+  else if (t.includes(q)) score += 78;
+  if (a === q) score += 85;
+  else if (a.includes(q)) score += 55;
+
+  const tokens = q.split(' ').filter(token => token.length > 1);
+  if (tokens.length) {
+    const titleHits = tokens.filter(token => t.includes(token)).length;
+    const artistHits = tokens.filter(token => a.includes(token)).length;
+    score += Math.round((titleHits / tokens.length) * 48);
+    score += Math.round((artistHits / tokens.length) * 24);
+  }
+
+  const requested = q;
+  if (/\b(official|audio|video|lyrics|lyrical|song|songs|music)\b/.test(t)) score += 4;
+  if (!/\b(shorts?)\b/.test(requested) && /\bshorts?\b/.test(t)) score -= 35;
+  if (!/\blive\b/.test(requested) && /\blive\b/.test(t)) score -= 12;
+  if (!/\b(cover|karaoke|instrumental)\b/.test(requested) && /\b(cover|karaoke|instrumental)\b/.test(t)) score -= 18;
+  if (!/\b(remix|slowed|reverb|lofi)\b/.test(requested) && /\b(slowed|reverb|lofi)\b/.test(t)) score -= 12;
+  return score;
+}
+
+function parseDuration(isoDuration) {
+  const match = String(isoDuration || '').match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  if (!match) return 240;
+  return (Number(match[1] || 0) * 3600) + (Number(match[2] || 0) * 60) + Number(match[3] || 0);
+}
+
 class SongService {
   getSongs(options) {
     return db.getSongs(options);
@@ -47,8 +94,9 @@ class SongService {
 
   async searchSongs(query, mood) {
     const normalizedQuery = String(query || '').trim().replace(/\s+/g, ' ');
-    if (!normalizedQuery) return [];
-    const cacheKey = `${mood || 'all'}_${normalizedQuery}`.toLowerCase();
+    if (!normalizedQuery || normalizedQuery.length < 2) return [];
+
+    const cacheKey = `${mood || 'all'}_${normalize(normalizedQuery)}`;
     const cached = searchCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) return cached.results;
     if (cached) searchCache.delete(cacheKey);
@@ -66,47 +114,91 @@ class SongService {
   }
 
   async performSearch(query, mood) {
-    // Search YouTube first so users can find tracks outside the local catalogue.
     if (config.youtubeApiKey) {
       try {
-        const searchQuery = `${query} Hindi song`;
-        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(searchQuery)}&type=video&videoCategoryId=10&maxResults=10&key=${config.youtubeApiKey}`;
-        const searchData = await fetchJson(searchUrl);
+        // Search the exact phrase. Do not append generic words such as "Hindi song":
+        // that broadens the query and often pushes unrelated uploads into suggestions.
+        const params = new URLSearchParams({
+          part: 'snippet',
+          q: query,
+          type: 'video',
+          order: 'relevance',
+          regionCode: 'IN',
+          relevanceLanguage: 'hi',
+          safeSearch: 'strict',
+          videoEmbeddable: 'true',
+          videoSyndicated: 'true',
+          maxResults: '20',
+          key: config.youtubeApiKey
+        });
+        const searchData = await fetchJson(`https://www.googleapis.com/youtube/v3/search?${params}`);
         const items = Array.isArray(searchData.items) ? searchData.items : [];
         const ids = items.map(item => item.id?.videoId).filter(Boolean);
 
         if (ids.length) {
-          const detailsUrl = `https://www.googleapis.com/youtube/v3/videos?part=status&id=${ids.join(',')}&key=${config.youtubeApiKey}`;
-          const detailsData = await fetchJson(detailsUrl);
-          const embeddableIds = new Set((detailsData.items || [])
-            .filter(video => video.status?.embeddable && video.status?.privacyStatus !== 'private')
-            .map(video => video.id));
+          const detailsParams = new URLSearchParams({
+            part: 'status,contentDetails',
+            id: ids.join(','),
+            key: config.youtubeApiKey
+          });
+          const detailsData = await fetchJson(`https://www.googleapis.com/youtube/v3/videos?${detailsParams}`);
+          const detailsById = new Map((detailsData.items || []).map(video => [video.id, video]));
 
-          const ytResults = items.filter(item => embeddableIds.has(item.id.videoId)).map(item => ({
-            id: 'yt_' + item.id.videoId,
-            title: item.snippet.title.replace(/(&quot;|&#39;|&amp;)/g, ''),
-            artist: item.snippet.channelTitle,
-            album: 'YouTube',
-            mood: mood || 'love',
-            youtubeId: item.id.videoId,
-            duration: 240,
-            cover: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url,
-            lyricsSnippet: '',
-            releaseYear: new Date().getFullYear(),
-            plays: 0
-          }));
+          const ranked = items
+            .map(item => {
+              const videoId = item.id?.videoId;
+              const details = detailsById.get(videoId);
+              if (!videoId || !details?.status?.embeddable || details.status.privacyStatus !== 'public') return null;
 
-          if (ytResults.length) return ytResults;
+              const title = String(item.snippet?.title || '').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+              const artist = item.snippet?.channelTitle || 'Unknown artist';
+              const score = scoreResult(query, title, artist);
+              if (score < 18) return null;
+
+              return {
+                id: 'yt_' + videoId,
+                title,
+                artist,
+                album: 'YouTube',
+                mood: mood || 'love',
+                youtubeId: videoId,
+                duration: parseDuration(details.contentDetails?.duration),
+                cover: item.snippet?.thumbnails?.high?.url || item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || '',
+                lyricsSnippet: '',
+                releaseYear: item.snippet?.publishedAt ? new Date(item.snippet.publishedAt).getFullYear() : new Date().getFullYear(),
+                plays: 0,
+                searchScore: score
+              };
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.searchScore - a.searchScore);
+
+          const unique = [];
+          const seen = new Set();
+          for (const song of ranked) {
+            const key = normalize(song.title);
+            if (seen.has(key)) continue;
+            seen.add(key);
+            delete song.searchScore;
+            unique.push(song);
+            if (unique.length === 8) break;
+          }
+          if (unique.length) return unique;
         }
       } catch (err) {
         console.warn('[SongService] YouTube search error:', err.message);
       }
     }
 
-    // Fallback to curated tracks if YouTube is unavailable or all results are blocked.
-    const dbResults = db.getSongs({ search: query, mood, limit: 10 });
-    if (dbResults.length) return dbResults;
-    return db.getSongs({ mood, limit: 10 });
+    // Use only genuinely matching catalogue tracks. Never fill the dropdown with
+    // random songs from the current mood when the query has no match.
+    const dbResults = db.getSongs({ search: query, mood: mood || 'all', limit: 30 });
+    return dbResults
+      .map(song => ({ ...song, searchScore: scoreResult(query, song.title, song.artist) }))
+      .filter(song => song.searchScore >= 18)
+      .sort((a, b) => b.searchScore - a.searchScore)
+      .slice(0, 8)
+      .map(({ searchScore, ...song }) => song);
   }
 }
 
