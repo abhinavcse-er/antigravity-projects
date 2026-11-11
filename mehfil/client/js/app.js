@@ -104,6 +104,7 @@
         let activeIndex = -1;
 
         const closeSuggestions = () => {
+            requestVersion++;
             suggestions.hidden = true;
             suggestions.innerHTML = "";
             suggestionSongs = [];
@@ -189,6 +190,7 @@
         input.setAttribute("aria-expanded", "false");
 
         input.addEventListener("input", () => {
+            requestVersion++;
             const query = input.value.trim();
             clearTimeout(debounceTimer);
             suggestionSongs = [];
@@ -198,10 +200,10 @@
                 closeSuggestions();
                 return;
             }
-            suggestions.innerHTML = '<div class="mehfil-search-loading"><i class="fa-solid fa-spinner fa-spin"></i> Finding songs...</div>';
+            suggestions.innerHTML = '<div class="mehfil-search-loading" role="status"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Finding matching songs...</div>';
             suggestions.hidden = false;
             input.setAttribute("aria-expanded", "true");
-            debounceTimer = setTimeout(() => searchSuggestions(query), 300);
+            debounceTimer = setTimeout(() => searchSuggestions(query), 420);
         });
 
         input.addEventListener("keydown", event => {

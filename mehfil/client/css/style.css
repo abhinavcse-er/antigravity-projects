@@ -6238,3 +6238,65 @@ body.mood-changing .background-image {
         animation: none !important;
     }
 }
+
+
+/* MEHFIL polish: audio-first player and small-screen layout safeguards */
+.album-cover { isolation: isolate; overflow: hidden; }
+.album-cover .cover-inner {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 58%), linear-gradient(145deg, rgba(12,10,14,.30), rgba(7,7,10,.88));
+}
+.youtube-player-surface {
+  inset: 0; top: 0; left: 0; z-index: 2; width: 100%; height: 100%;
+  max-width: none; aspect-ratio: 1 / 1; transform: none;
+  border: 0; border-radius: inherit; box-shadow: none; opacity: .015;
+}
+.youtube-player-surface iframe { width: 100% !important; height: 100% !important; border: 0; }
+.mehfil-quick-search { position: relative; z-index: 30; }
+.mehfil-search-suggestions { z-index: 80; overscroll-behavior: contain; scrollbar-width: thin; }
+.mehfil-suggestion, .mehfil-suggestion-details { min-width: 0; }
+.mehfil-suggestion-details { overflow: hidden; }
+.mehfil-suggestion-details strong, .mehfil-suggestion-details small {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.player-card, .track-section, .center-content, .right-sidebar { min-width: 0; }
+.track-section h3, .track-section > p, #lyricsSnippet { overflow-wrap: anywhere; }
+.progress-bar { touch-action: pan-y; }
+@media (max-width: 900px) {
+  .main { gap: 14px; }
+  .mood-sidebar { position: static; }
+  .center-content { width: 100%; }
+}
+@media (max-width: 600px) {
+  .header { flex-wrap: nowrap; }
+  .brand-text h1 { font-size: clamp(22px, 6vw, 28px); }
+  .brand-text p { font-size: 6px; letter-spacing: 1.2px; }
+  .header-live { gap: 5px; }
+  .header-live .live-text, .header-live .header-divider { display: none; }
+  .main { gap: 10px; }
+  .mood-sidebar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .player-card { overflow: hidden; }
+  .album-cover { width: min(72vw, 220px); min-width: 200px; max-width: 220px; }
+  .youtube-player-surface { min-width: 200px; min-height: 200px; }
+  .track-section { gap: 5px; }
+  .track-meta { justify-content: space-between; }
+  .player-controls { gap: clamp(5px, 2vw, 12px); }
+  .player-controls button { flex: 0 0 40px; }
+  .progress-container { margin-top: 8px; }
+  .live-message { text-align: center; padding-inline: 8px; }
+  .bottom-player { padding: 7px 10px; }
+}
+@media (max-width: 380px) {
+  .header, .main { width: calc(100% - 16px); }
+  .brand { gap: 7px; }
+  .brand-icon { width: 35px; height: 35px; }
+  .header-live { font-size: 11px; padding: 5px 6px; }
+  .mood-sidebar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mood-button { min-height: 58px; }
+  .album-cover { width: 200px; min-width: 200px; }
+  .bottom-track strong { max-width: 155px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .player-card, .album-cover, .mehfil-suggestion { transition: none !important; }
+}

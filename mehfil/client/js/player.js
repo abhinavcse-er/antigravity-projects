@@ -49,8 +49,8 @@ const MehfilAudioPlayer = (function () {
             width: "100%",
             playerVars: {
                 autoplay: 0,
-                controls: 1,
-                disablekb: 0,
+                controls: 0,
+                disablekb: 1,
                 fs: 0,
                 modestbranding: 1,
                 rel: 0,

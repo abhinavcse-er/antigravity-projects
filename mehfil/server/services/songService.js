@@ -145,7 +145,7 @@ class SongService {
           safeSearch: 'strict',
           videoEmbeddable: 'true',
           videoSyndicated: 'true',
-          maxResults: '20',
+          maxResults: '25',
           key: config.youtubeApiKey
         });
         const searchData = await fetchJson(`https://www.googleapis.com/youtube/v3/search?${params}`);
@@ -171,7 +171,7 @@ class SongService {
               const artist = item.snippet?.channelTitle || 'Unknown artist';
               const description = item.snippet?.description || '';
               const score = scoreResult(query, title, artist, description);
-              if (score < 32) return null;
+              if (score < 42) return null;
 
               return {
                 id: 'yt_' + videoId,
@@ -194,7 +194,7 @@ class SongService {
           const unique = [];
           const seen = new Set();
           for (const song of ranked) {
-            const key = normalize(song.title);
+            const key = song.youtubeId || normalize(song.title);
             if (seen.has(key)) continue;
             seen.add(key);
             delete song.searchScore;

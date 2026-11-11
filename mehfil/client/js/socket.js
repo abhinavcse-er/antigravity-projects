@@ -55,11 +55,21 @@ const MehfilSocket = (function () {
             if (!heartbeatFailureLogged) {
                 console.warn("[PRESENCE] Heartbeat unavailable; retrying automatically.", error.message);
                 heartbeatFailureLogged = true;
+                markAudienceUnavailable();
             }
         } finally {
             window.clearTimeout(timeoutId);
             heartbeatInFlight = false;
         }
+    }
+
+    function markAudienceUnavailable() {
+        ["headerListeners", "liveListeners", "bottomListeners", "centerListeners", "loveCount", "dardCount", "sukoonCount", "safarCount", "happyCount", "nightCount"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = "—";
+        });
+        const extra = document.getElementById("extraListeners");
+        if (extra) extra.style.display = "none";
     }
 
     function startHeartbeat() {
@@ -105,7 +115,7 @@ const MehfilSocket = (function () {
         socket.on("connect_error", (error) => {
             isConnected = false;
             const liveBadge = document.querySelector(".header-live");
-            if (liveBadge) liveBadge.title = "Live count is using HTTP fallback while realtime reconnects";
+            if (liveBadge) liveBadge.title = "Live audience is temporarily unavailable; reconnecting";
             console.error("[SOCKET] Connection failed:", error.message);
         });
 
