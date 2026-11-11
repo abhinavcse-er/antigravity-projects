@@ -112,8 +112,8 @@ const MehfilAudioPlayer = (function () {
         // If song has a backup ID and we haven't tried it yet, try the backup stream!
         if (currentSong && currentSong.backupId && currentSong.backupId !== currentSong.youtubeId && !triedBackup) {
             triedBackup = true;
-            // Allow the backup video's own error event to enter recovery too.
-            errorRecoveryInProgress = false;
+            // Keep recovery locked while the backup is tested. This prevents
+            // duplicate YouTube error callbacks from skipping multiple tracks.
             console.log(`[PLAYER] Trying backup source for "${currentSong.title}"...`);
             if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
                 ytPlayer.loadVideoById({
@@ -128,7 +128,7 @@ const MehfilAudioPlayer = (function () {
         // The video cannot be embedded (for example YouTube error 150).
         // Skip it once; the next track gets a fresh recovery state.
         setTimeout(() => {
-            errorRecoveryInProgress = false;
+            // loadSong() resets this lock for the next track.
             if (typeof window.onSongEnded === "function") {
                 window.onSongEnded();
             }
