@@ -7,35 +7,73 @@ const MehfilSocket = (function () {
     "use strict";
 
     const BACKEND_URL = "https://mehfil-backend-ing6.onrender.com";
+    const API_URL = BACKEND_URL + "/api";
+    const HEARTBEAT_INTERVAL = 25000;
     const VALID_MOODS = new Set(["love", "dard", "sukoon", "safar", "happy", "late-night"]);
 
     let socket = null;
     let currentUser = null;
     let currentMood = "love";
     let isConnected = false;
-    let presencePollTimer = null;
+    let heartbeatTimer = null;
+    let heartbeatInFlight = false;
+    let heartbeatFailureLogged = false;
 
-    async function refreshPresenceSnapshot() {
+    function getClientId() {
+        return window.MehfilAPI?.getUserId?.() || null;
+    }
+
+    async function sendHeartbeat() {
+        const clientId = getClientId();
+        if (!clientId || heartbeatInFlight) return;
+
+        heartbeatInFlight = true;
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 9000);
+
         try {
-            const response = await fetch(`${BACKEND_URL}/api/status`, { cache: "no-store" });
-            if (!response.ok) throw new Error(`Presence status HTTP ${response.status}`);
+            const response = await fetch(API_URL + "/presence/heartbeat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-user-id": clientId
+                },
+                body: JSON.stringify({ mood: currentMood }),
+                signal: controller.signal,
+                cache: "no-store"
+            });
+
+            if (!response.ok) throw new Error("Presence heartbeat HTTP " + response.status);
             const payload = await response.json();
-            if (payload?.status === "online" && Number.isFinite(Number(payload.listeners))) {
-                updateAudienceUI({ total: payload.listeners, moods: payload.moods || {} });
-                document.body.classList.toggle("mehfil-live-connected", isConnected);
-                return true;
+            if (payload?.stats) updateAudienceUI(payload.stats);
+
+            if (heartbeatFailureLogged) {
+                console.info("[PRESENCE] Live audience sync restored.");
+                heartbeatFailureLogged = false;
             }
         } catch (error) {
-            console.warn("[SOCKET] Presence snapshot unavailable:", error.message);
+            if (!heartbeatFailureLogged) {
+                console.warn("[PRESENCE] Heartbeat unavailable; retrying automatically.", error.message);
+                heartbeatFailureLogged = true;
+            }
+        } finally {
+            window.clearTimeout(timeoutId);
+            heartbeatInFlight = false;
         }
-        return false;
+    }
+
+    function startHeartbeat() {
+        if (heartbeatTimer) window.clearInterval(heartbeatTimer);
+        sendHeartbeat();
+        heartbeatTimer = window.setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
     }
 
     function init(initialMood = "love") {
         currentMood = VALID_MOODS.has(initialMood) ? initialMood : "love";
+        startHeartbeat();
 
         if (typeof window.io !== "function") {
-            console.error("[SOCKET] Socket.IO client failed to load. Check the CDN script in index.html.");
+            console.error("[SOCKET] Socket.IO client failed to load. HTTP presence fallback remains active.");
             return;
         }
 
@@ -46,6 +84,7 @@ const MehfilSocket = (function () {
         }
 
         socket = window.io(BACKEND_URL, {
+            auth: { userId: getClientId() },
             query: { mood: currentMood },
             transports: ["websocket", "polling"],
             reconnection: true,
@@ -57,14 +96,16 @@ const MehfilSocket = (function () {
 
         socket.on("connect", () => {
             isConnected = true;
-            document.body.classList.add("mehfil-live-connected");
             console.log("[SOCKET] Connected to MEHFIL backend:", socket.id);
-            refreshPresenceSnapshot();
+            const liveBadge = document.querySelector(".header-live");
+            if (liveBadge) liveBadge.title = "Live audience connected and syncing";
+            sendHeartbeat();
         });
 
         socket.on("connect_error", (error) => {
             isConnected = false;
-            document.body.classList.remove("mehfil-live-connected");
+            const liveBadge = document.querySelector(".header-live");
+            if (liveBadge) liveBadge.title = "Live count is using HTTP fallback while realtime reconnects";
             console.error("[SOCKET] Connection failed:", error.message);
         });
 
@@ -108,27 +149,16 @@ const MehfilSocket = (function () {
             }
         });
 
-        socket.io.on("reconnect", () => refreshPresenceSnapshot());
-
         socket.on("disconnect", (reason) => {
             isConnected = false;
-            document.body.classList.remove("mehfil-live-connected");
+            const liveBadge = document.querySelector(".header-live");
+            if (liveBadge) liveBadge.title = "Realtime reconnecting; live count continues through HTTP heartbeat";
             console.warn("[SOCKET] Disconnected from MEHFIL backend:", reason);
-        });
-
-        // REST snapshot is a recovery path if a realtime presence packet is missed.
-        if (presencePollTimer) window.clearInterval(presencePollTimer);
-        refreshPresenceSnapshot();
-        presencePollTimer = window.setInterval(() => {
-            if (!document.hidden) refreshPresenceSnapshot();
-        }, 15000);
-        document.addEventListener("visibilitychange", () => {
-            if (!document.hidden) refreshPresenceSnapshot();
         });
     }
 
     function updateAudienceUI(stats) {
-        if (!stats || stats.total === undefined || !Number.isFinite(Number(stats.total))) return;
+        if (!stats || !Number.isFinite(Number(stats.total))) return;
 
         const total = Math.max(0, Math.floor(Number(stats.total)));
         const formattedTotal = total.toLocaleString();
@@ -138,10 +168,9 @@ const MehfilSocket = (function () {
             if (el) el.textContent = formattedTotal;
         });
 
-        // Seven decorative avatar slots are shown in the panel.
         const extraEl = document.getElementById("extraListeners");
         if (extraEl) {
-            extraEl.textContent = `+${Math.max(0, total - 7).toLocaleString()}`;
+            extraEl.textContent = "+" + Math.max(0, total - 7).toLocaleString();
         }
 
         if (stats.moods) {
@@ -186,6 +215,7 @@ const MehfilSocket = (function () {
         setMood: (mood) => {
             currentMood = VALID_MOODS.has(mood) ? mood : "love";
             if (socket?.connected) socket.emit("mood:change", currentMood);
+            sendHeartbeat();
         },
 
         sendReaction: (type) => {
