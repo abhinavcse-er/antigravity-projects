@@ -4382,3 +4382,30 @@ body.mood-changing .background-image {
     }
 
 }
+
+/* QUICK SONG SEARCH */
+.mehfil-quick-search {
+    width: min(100%, 720px); display: flex; align-items: center; gap: 12px;
+    margin: 0 auto 24px; padding: 9px 10px 9px 17px;
+    border: 1px solid var(--border); border-radius: 16px;
+    background: rgba(12,10,15,.72); backdrop-filter: blur(18px);
+    box-shadow: 0 12px 35px rgba(0,0,0,.16);
+}
+.mehfil-quick-search > i { color: var(--accent); font-size: 16px; }
+.mehfil-quick-search input {
+    flex: 1; min-width: 0; padding: 9px 0; border: 0; outline: 0;
+    color: #fff; background: transparent; font: inherit;
+}
+.mehfil-quick-search input::placeholder { color: #918991; }
+.mehfil-quick-search button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 11px 16px; border: 0; border-radius: 11px; color: #fff;
+    background: linear-gradient(135deg,var(--accent),var(--accent-2));
+    font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.mehfil-quick-search button:disabled { opacity: .6; cursor: wait; }
+@media (max-width:450px) {
+    .mehfil-quick-search { gap: 8px; padding: 7px 8px 7px 12px; margin-bottom: 18px; }
+    .mehfil-quick-search button { padding: 10px 11px; }
+    .mehfil-quick-search button span { display: none; }
+}
