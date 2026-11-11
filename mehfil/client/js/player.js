@@ -182,9 +182,7 @@ const MehfilAudioPlayer = (function () {
         }
 
         ytPlayer.playVideo();
-        isPlaying = true;
-        updatePlayPauseUI(true);
-        startProgressLoop();
+        // Wait for YouTube's PLAYING event before changing the UI or progress timer.
     }
 
     function pause() {

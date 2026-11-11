@@ -10,6 +10,8 @@ const setupSockets = require('./sockets/socketHandler');
 const radioService = require('./services/radioService');
 
 const app = express();
+// Trust the single reverse proxy in front of the Render service for client IP throttling.
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // Socket.IO: websocket first, polling fallback remains available for restrictive networks.

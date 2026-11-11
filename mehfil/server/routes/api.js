@@ -8,6 +8,44 @@ const radioService = require('../services/radioService');
 
 let presenceBroadcastTimer = null;
 
+
+function createRateLimiter({ windowMs = 60000, max = 30, ipMultiplier = 10 } = {}) {
+  const buckets = new Map();
+  let operations = 0;
+  return (req, res, next) => {
+    const clientId = String(req.headers['x-user-id'] || '').slice(0, 100);
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const now = Date.now();
+    const checks = [
+      { key: 'client:' + (clientId || ip), limit: max },
+      { key: 'ip:' + ip, limit: max * ipMultiplier }
+    ];
+    if ((++operations & 255) === 0) {
+      for (const [key, bucket] of buckets) {
+        if (now - bucket.startedAt >= windowMs) buckets.delete(key);
+      }
+    }
+    for (const check of checks) {
+      let bucket = buckets.get(check.key);
+      if (!bucket || now - bucket.startedAt >= windowMs) {
+        bucket = { startedAt: now, count: 0 };
+        buckets.set(check.key, bucket);
+      }
+      bucket.count++;
+      if (bucket.count > check.limit) {
+        res.setHeader('Retry-After', String(Math.max(1, Math.ceil((windowMs - (now - bucket.startedAt)) / 1000))));
+        return res.status(429).json({ error: 'Too many requests. Please try again shortly.' });
+      }
+    }
+    next();
+  };
+}
+const writeLimiter = createRateLimiter({ windowMs: 60000, max: 30 });
+const heartbeatLimiter = createRateLimiter({ windowMs: 60000, max: 6, ipMultiplier: 1000 });
+const validMoods = new Set(['love', 'dard', 'sukoon', 'safar', 'happy', 'late-night']);
+const validClientId = value => /^[a-zA-Z0-9_-]{6,100}$/.test(String(value || ''));
+
+
 function schedulePresenceBroadcast(io) {
   if (!io || presenceBroadcastTimer) return;
   presenceBroadcastTimer = setTimeout(() => {
@@ -20,7 +58,7 @@ function schedulePresenceBroadcast(io) {
  // POST /api/presence/heartbeat
 // HTTP heartbeat keeps the live audience accurate when a device's WebSocket
 // is blocked or temporarily reconnecting. The device ID is shared with Socket.IO.
-router.post('/presence/heartbeat', (req, res) => {
+router.post('/presence/heartbeat', heartbeatLimiter, (req, res) => {
   const clientKey = String(req.headers['x-user-id'] || '').trim();
   if (!/^[a-zA-Z0-9_-]{6,100}$/.test(clientKey)) {
     return res.status(400).json({ error: 'A valid client ID is required' });
@@ -91,7 +129,7 @@ router.get('/songs/:id', (req, res) => {
 });
 
 // POST /api/songs/:id/play
-router.post('/songs/:id/play', (req, res) => {
+router.post('/songs/:id/play', writeLimiter, (req, res) => {
   songService.recordPlay(req.params.id);
   res.json({ success: true });
 });
@@ -107,17 +145,17 @@ router.get('/requests', (req, res) => {
 });
 
 // POST /api/requests
-router.post('/requests', (req, res) => {
-  const { songTitle, artist, mood, requesterName, dedication } = req.body;
-  if (!songTitle || !songTitle.trim()) {
+router.post('/requests', writeLimiter, (req, res) => {
+  const { songTitle, artist, mood, requesterName, dedication } = req.body || {};
+  if (typeof songTitle !== 'string' || !songTitle.trim()) {
     return res.status(400).json({ error: 'Song title is required' });
   }
   const newRequest = db.addRequest({
-    songTitle: songTitle.trim(),
-    artist: (artist || '').trim(),
-    mood: mood || 'love',
-    requesterName: (requesterName || '').trim() || 'Mehfil Dost',
-    dedication: (dedication || '').trim()
+    songTitle: songTitle.trim().slice(0, 160),
+    artist: typeof artist === 'string' ? artist.trim().slice(0, 100) : '',
+    mood: validMoods.has(mood) ? mood : 'love',
+    requesterName: typeof requesterName === 'string' ? requesterName.trim().slice(0, 60) || 'Mehfil Dost' : 'Mehfil Dost',
+    dedication: typeof dedication === 'string' ? dedication.trim().slice(0, 500) : ''
   });
 
   // Broadcast to all sockets via app-level io
@@ -129,7 +167,7 @@ router.post('/requests', (req, res) => {
 });
 
 // POST /api/requests/:id/vote
-router.post('/requests/:id/vote', (req, res) => {
+router.post('/requests/:id/vote', writeLimiter, (req, res) => {
   const updated = db.voteRequest(req.params.id);
   if (!updated) return res.status(404).json({ error: 'Request not found' });
 
@@ -146,17 +184,17 @@ router.get('/community', (req, res) => {
 });
 
 // POST /api/community
-router.post('/community', (req, res) => {
-  const { userName, userAvatar, mood, text, isShayari } = req.body;
-  if (!text || !text.trim()) {
+router.post('/community', writeLimiter, (req, res) => {
+  const { userName, userAvatar, mood, text, isShayari } = req.body || {};
+  if (typeof text !== 'string' || !text.trim()) {
     return res.status(400).json({ error: 'Message text cannot be empty' });
   }
 
   const newMsg = db.addCommunityMessage({
-    userName: (userName || '').trim() || 'Musafir',
-    userAvatar: userAvatar || '🎶',
-    mood: mood || 'love',
-    text: text.trim(),
+    userName: typeof userName === 'string' ? userName.trim().slice(0, 60) || 'Musafir' : 'Musafir',
+    userAvatar: typeof userAvatar === 'string' ? userAvatar.slice(0, 12) : '🎶',
+    mood: validMoods.has(mood) ? mood : 'love',
+    text: text.trim().slice(0, 1000),
     isShayari: !!isShayari
   });
 
@@ -168,7 +206,7 @@ router.post('/community', (req, res) => {
 });
 
 // POST /api/community/:id/like
-router.post('/community/:id/like', (req, res) => {
+router.post('/community/:id/like', writeLimiter, (req, res) => {
   const updated = db.likeCommunityMessage(req.params.id);
   if (!updated) return res.status(404).json({ error: 'Message not found' });
 
@@ -181,15 +219,17 @@ router.post('/community/:id/like', (req, res) => {
 
 // GET /api/favorites
 router.get('/favorites', (req, res) => {
-  const userId = req.headers['x-user-id'] || 'guest_user';
+  const userId = String(req.headers['x-user-id'] || '');
+  if (!validClientId(userId)) return res.status(400).json({ error: 'A valid client ID is required' });
   res.json(db.getFavorites(userId));
 });
 
 // POST /api/favorites
-router.post('/favorites', (req, res) => {
-  const userId = req.headers['x-user-id'] || 'guest_user';
-  const { songId } = req.body;
-  if (!songId) return res.status(400).json({ error: 'songId is required' });
+router.post('/favorites', writeLimiter, (req, res) => {
+  const userId = String(req.headers['x-user-id'] || '');
+  const { songId } = req.body || {};
+  if (!validClientId(userId)) return res.status(400).json({ error: 'A valid client ID is required' });
+  if (!Number.isInteger(Number(songId)) || Number(songId) < 1) return res.status(400).json({ error: 'A valid songId is required' });
 
   const result = db.toggleFavorite(userId, songId);
   res.json(result);

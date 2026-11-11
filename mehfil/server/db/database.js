@@ -15,6 +15,11 @@ function initDatabase() {
     const { DatabaseSync } = require('node:sqlite');
     db = new DatabaseSync(dbFilePath);
     isNativeSqlite = true;
+    try {
+      db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
+    } catch (pragmaError) {
+      console.warn('[DB] SQLite tuning pragma unavailable; continuing with safe defaults.', pragmaError.message);
+    }
     console.log('[DB] Using high-performance Node built-in SQLite engine.');
     setupSqliteSchema();
   } catch (err) {
@@ -71,6 +76,13 @@ function setupSqliteSchema() {
       createdAt INTEGER NOT NULL,
       UNIQUE(userId, songId)
     );
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_songs_mood_plays ON songs(mood, plays DESC);
+    CREATE INDEX IF NOT EXISTS idx_requests_votes_created ON requests(votes DESC, createdAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_community_timestamp ON community_messages(timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_favorites_user_created ON favorites(userId, createdAt DESC);
   `);
 
   // Check if songs exist
