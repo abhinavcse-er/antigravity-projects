@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { seedSongs, seedCommunityMessages, seedRequests } = require('./seedData');
 
 let db = null;
@@ -7,17 +8,33 @@ let isNativeSqlite = false;
 let memoryStore = null;
 
 const defaultDbFilePath = path.join(__dirname, 'mehfil.db');
-const dbFilePath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : defaultDbFilePath;
-const jsonBackupPath = process.env.DB_PATH
+const requestedDbFilePath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : defaultDbFilePath;
+let dbFilePath = requestedDbFilePath;
+let jsonBackupPath = process.env.DB_PATH
   ? path.join(path.dirname(dbFilePath), 'mehfil-store.json')
   : path.join(__dirname, 'mehfil-store.json');
 
 if (process.env.DB_PATH) {
-  fs.mkdirSync(path.dirname(dbFilePath), { recursive: true });
-  // Preserve an existing local SQLite file when moving to a newly mounted disk.
-  if (dbFilePath !== defaultDbFilePath && !fs.existsSync(dbFilePath) && fs.existsSync(defaultDbFilePath)) {
-    fs.copyFileSync(defaultDbFilePath, dbFilePath);
-    console.log('[DB] Copied the existing SQLite database to the configured persistent path.');
+  const mountDirectory = path.dirname(requestedDbFilePath);
+  try {
+    // Render creates and mounts this directory; the app must not create /var/data itself.
+    if (!fs.existsSync(mountDirectory)) {
+      throw new Error(`mount directory does not exist: ${mountDirectory}`);
+    }
+    fs.accessSync(mountDirectory, fs.constants.W_OK);
+    // Preserve an existing local SQLite file when moving to a newly mounted disk.
+    if (requestedDbFilePath !== defaultDbFilePath &&
+        !fs.existsSync(requestedDbFilePath) &&
+        fs.existsSync(defaultDbFilePath)) {
+      fs.copyFileSync(defaultDbFilePath, requestedDbFilePath);
+      console.log('[DB] Copied the existing SQLite database to the configured persistent path.');
+    }
+    console.log(`[DB] Persistent database path is writable: ${requestedDbFilePath}`);
+  } catch (diskError) {
+    // Keep startup available, but warn that this temporary fallback is not persistent.
+    console.error(`[DB] WARNING: DB_PATH is not writable (${diskError.message}). Attach a Render Persistent Disk and mount it at ${mountDirectory}. Using temporary storage; data may be lost on restart or redeploy.`);
+    dbFilePath = path.join(os.tmpdir(), 'mehfil.db');
+    jsonBackupPath = path.join(os.tmpdir(), 'mehfil-store.json');
   }
 }
 
