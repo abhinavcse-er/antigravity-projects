@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MEHFIL — Jahan Har Mood Ka Ek Gaana Hai</title>
+
+    <meta name="description" content="MEHFIL — Jahan har mood ka ek gaana hai. Real-time Indian music lounge, synchronized radio & community.">
+
+    <!-- FONTS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet">
+
+    <!-- FONT AWESOME -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- MAIN CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/modals.css">
+</head>
+
+<body class="mood-love">
+
+    <!-- BACKGROUND -->
+    <div class="background">
+        <div class="background-image"></div>
+        <div class="background-overlay"></div>
+        <div class="noise"></div>
+        <div class="particles" id="particles"></div>
+        <div class="ambient-glow glow-one"></div>
+        <div class="ambient-glow glow-two"></div>
+    </div>
+
+    <!-- FLOATING REACTIONS HOLDER -->
+    <div class="reactions-container" id="reactionsContainer"></div>
+
+    <!-- APP -->
+    <div class="app">
+
+        <!-- HEADER -->
+        <header class="header">
+
+            <!-- BRAND -->
+            <a href="#" class="brand" aria-label="MEHFIL Home">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-radio"></i>
+                </div>
+                <div class="brand-text">
+                    <h1>MEHFIL</h1>
+                    <p>JAHAN HAR MOOD KA<br>EK GAANA HAI</p>
+                </div>
+            </a>
+
+            <!-- NAVIGATION -->
+            <nav class="navigation">
+                <a href="#" class="nav-link active">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Home</span>
+                </a>
+                <a href="#explore" class="nav-link">
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Explore</span>
+                </a>
+                <a href="#requests" class="nav-link">
+                    <i class="fa-regular fa-message"></i>
+                    <span>Requests</span>
+                </a>
+                <a href="#community" class="nav-link">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Community</span>
+                </a>
+                <a href="#favorites" class="nav-link">
+                    <i class="fa-regular fa-heart"></i>
+                    <span>Favorites</span>
+                </a>
+                <a href="#about" class="nav-link">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>About</span>
+                </a>
+            </nav>
+
+            <!-- RADIO MODE TOGGLE BADGE -->
+            <button class="mode-toggle-btn" id="radioModeBadge" title="Switch between Solo Mood Lounge and Live Synchronized Radio">
+                <span class="radio-pulse"></span>
+                <span class="mode-text">Solo Lounge</span>
+            </button>
+
+            <!-- LIVE STATUS -->
+            <div class="header-live">
+                <span class="live-dot"></span>
+                <span class="live-text">LIVE</span>
+                <span class="header-divider"></span>
+                <i class="fa-solid fa-headphones listener-icon"></i>
+                <strong id="headerListeners">1,240</strong>
+            </div>
+
+            <!-- MOBILE MENU BUTTON -->
+            <button class="menu-button" id="menuButton" aria-label="Open menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+        </header>
+
+        <!-- MAIN -->
+        <main class="main">
+
+            <!-- MOOD SIDEBAR -->
+            <aside class="mood-sidebar">
+                <div class="sidebar-title">CHOOSE YOUR MOOD</div>
+
+                <button class="mood-button active" data-mood="love">
+                    <span class="mood-icon love-icon"><i class="fa-solid fa-heart"></i></span>
+                    <span class="mood-name">LOVE</span>
+                </button>
+
+                <button class="mood-button" data-mood="dard">
+                    <span class="mood-icon dard-icon"><i class="fa-solid fa-heart-crack"></i></span>
+                    <span class="mood-name">DARD</span>
+                </button>
+
+                <button class="mood-button" data-mood="sukoon">
+                    <span class="mood-icon sukoon-icon"><i class="fa-solid fa-spa"></i></span>
+                    <span class="mood-name">SUKOON</span>
+                </button>
+
+                <button class="mood-button" data-mood="safar">
+                    <span class="mood-icon safar-icon"><i class="fa-solid fa-road"></i></span>
+                    <span class="mood-name">SAFAR</span>
+                </button>
+
+                <button class="mood-button" data-mood="happy">
+                    <span class="mood-icon happy-icon"><i class="fa-solid fa-sun"></i></span>
+                    <span class="mood-name">HAPPY</span>
+                </button>
+
+                <button class="mood-button" data-mood="late-night">
+                    <span class="mood-icon night-icon"><i class="fa-solid fa-moon"></i></span>
+                    <span class="mood-name">LATE NIGHT</span>
+                </button>
+
+                <button class="surprise-button" id="surpriseButton">
+                    <span class="surprise-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                    <span>
+                        <strong>Surprise Me</strong>
+                        <small>Mehfil will decide</small>
+                    </span>
+                </button>
+            </aside>
+
+            <!-- CENTER -->
+            <section class="center-content">
+
+                <!-- MOOD INTRO -->
+                <div class="mood-intro">
+                    <span class="you-are">YOU ARE IN</span>
+                    <h2 id="moodTitle">LOVE</h2>
+                    <p id="moodQuote">“Pyaar ke gaane, dil se dil tak.”</p>
+                    <button id="moodAction" class="mood-action">WHY LOVE? <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+
+                <!-- AUDIO WAVE -->
+                <div class="audio-wave" id="audioWave" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span><span></span><span></span>
+                    <span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+
+                <!-- PLAYER CARD -->
+                <div class="player-card">
+
+                    <!-- ALBUM / MOOD VISUAL -->
+                    <div class="album-cover" id="albumCoverVisual" style="background-size: cover; background-position: center;">
+                        <div class="cover-inner">
+                            <span class="cover-icon">
+                                <i class="fa-solid fa-music"></i>
+                            </span>
+                            <span class="cover-title">MEHFIL</span>
+                            <span class="cover-small">MOOD RADIO</span>
+                        </div>
+                    </div>
+
+                    <!-- TRACK SECTION -->
+                    <div class="track-section">
+
+                        <div class="track-meta">
+                            <span>
+                                <i class="fa-solid fa-wave-square"></i>
+                                NOW PLAYING
+                            </span>
+
+                            <button class="favorite-button" id="favoriteButton" aria-label="Add to favorites" title="Save to Favorites">
+                                <i class="fa-regular fa-heart"></i>
+                            </button>
+                        </div>
+
+                        <h3 id="songTitle">Tum Se Hi</h3>
+                        <p id="songArtist">Mohit Chauhan, Pritam</p>
+                        <div id="lyricsSnippet" class="lyrics-snippet" style="font-size: 0.84rem; font-style: italic; color: #ffb449; margin-top: 4px; min-height: 18px;"></div>
+
+                        <!-- PROGRESS -->
+                        <div class="progress-container">
+                            <div class="progress-bar" id="progressBar" role="slider" aria-label="Song progress">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+
+                            <div class="time-row">
+                                <span id="currentTime">00:00</span>
+                                <span id="duration">05:23</span>
+                            </div>
+                        </div>
+
+                        <!-- PLAYER CONTROLS -->
+                        <div class="player-controls">
+                            <button id="shuffleButton" aria-label="Shuffle" title="Shuffle (S)">
+                                <i class="fa-solid fa-shuffle"></i>
+                            </button>
+
+                            <button id="previousButton" aria-label="Previous" title="Previous (P or Left Arrow)">
+                                <i class="fa-solid fa-backward-step"></i>
+                            </button>
+
+                            <button class="play-button" id="playButton" aria-label="Play" title="Play / Pause (Space)">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+
+                            <button id="nextButton" aria-label="Next" title="Next (N or Right Arrow)">
+                                <i class="fa-solid fa-forward-step"></i>
+                            </button>
+
+                            <button id="repeatButton" aria-label="Repeat" title="Repeat (R)">
+                                <i class="fa-solid fa-repeat"></i>
+                            </button>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- LIVE MESSAGE -->
+                <div class="live-message">
+                    <span class="live-pulse"></span>
+                    <span>You’re listening with <strong id="centerListeners">1,240</strong> others right now</span>
+                </div>
+
+            </section>
+
+            <!-- RIGHT SIDEBAR -->
+            <aside class="right-sidebar">
+
+                <div class="live-panel">
+
+                    <!-- LIVE HEADER -->
+                    <div class="panel-heading">
+                        <span class="live-dot"></span>
+                        <span>LIVE MEHFIL</span>
+                    </div>
+
+                    <!-- LISTENER COUNT -->
+                    <div class="big-listener-count">
+                        <strong id="liveListeners">1,240</strong>
+                        <span>people are listening<br>right now</span>
+                    </div>
+
+                    <!-- LISTENER AVATARS -->
+                    <div class="listener-avatars">
+                        <div><i class="fa-solid fa-user"></i></div>
+                        <div><i class="fa-solid fa-user"></i></div>
+                        <div><i class="fa-solid fa-user"></i></div>
+                        <div><i class="fa-solid fa-user"></i></div>
+                        <div><i class="fa-solid fa-user"></i></div>
+                        <div><i class="fa-solid fa-user"></i></div>
+                        <div><i class="fa-solid fa-user"></i></div>
+                        <span id="extraListeners">+1.2k</span>
+                    </div>
+
+                    <div class="panel-divider"></div>
+
+                    <!-- MOOD STATS -->
+                    <h4>LISTENERS BY MOOD</h4>
+
+                    <div class="mood-stats">
+                        <div class="mood-stat">
+                            <span class="stat-dot love-dot"></span>
+                            <span>Love</span>
+                            <strong id="loveCount">347</strong>
+                        </div>
+
+                        <div class="mood-stat">
+                            <span class="stat-dot dard-dot"></span>
+                            <span>Dard</span>
+                            <strong id="dardCount">236</strong>
+                        </div>
+
+                        <div class="mood-stat">
+                            <span class="stat-dot sukoon-dot"></span>
+                            <span>Sukoon</span>
+                            <strong id="sukoonCount">273</strong>
+                        </div>
+
+                        <div class="mood-stat">
+                            <span class="stat-dot safar-dot"></span>
+                            <span>Safar</span>
+                            <strong id="safarCount">149</strong>
+                        </div>
+
+                        <div class="mood-stat">
+                            <span class="stat-dot happy-dot"></span>
+                            <span>Happy</span>
+                            <strong id="happyCount">124</strong>
+                        </div>
+
+                        <div class="mood-stat">
+                            <span class="stat-dot night-dot"></span>
+                            <span>Late Night</span>
+                            <strong id="nightCount">112</strong>
+                        </div>
+                    </div>
+
+                    <!-- QUICK LIVE REACTIONS -->
+                    <div class="quick-reactions">
+                        <button class="reaction-btn" data-reaction="❤️" title="Love">❤️</button>
+                        <button class="reaction-btn" data-reaction="☕" title="Chai & Ghazal">☕</button>
+                        <button class="reaction-btn" data-reaction="🎶" title="Sangeet">🎶</button>
+                        <button class="reaction-btn" data-reaction="🌧️" title="Baarish">🌧️</button>
+                        <button class="reaction-btn" data-reaction="🥀" title="Yaadein">🥀</button>
+                        <button class="reaction-btn" data-reaction="🔥" title="Vibe">🔥</button>
+                    </div>
+
+                    <div class="panel-divider"></div>
+
+                    <!-- RECENTLY PLAYED -->
+                    <div class="recent-header">
+                        <h4>RECENTLY PLAYED</h4>
+                        <button id="viewAllRecent" type="button">VIEW ALL</button>
+                    </div>
+
+                    <div class="recent-list" id="recentList">
+                        <!-- Dynamic via app.js -->
+                    </div>
+
+                </div>
+
+            </aside>
+
+        </main>
+
+        <!-- BOTTOM PLAYER -->
+        <div class="bottom-player">
+
+            <!-- RADIO -->
+            <div class="bottom-radio">
+                <div class="radio-live-icon">
+                    <i class="fa-solid fa-radio"></i>
+                </div>
+                <div>
+                    <strong>MEHFIL RADIO</strong>
+                    <small>24×7 LIVE · NON STOP</small>
+                </div>
+            </div>
+
+            <!-- CURRENT TRACK -->
+            <div class="bottom-track">
+                <div class="bottom-cover">
+                    <i class="fa-solid fa-music"></i>
+                </div>
+                <div>
+                    <strong id="bottomSong">Tum Se Hi</strong>
+                    <small id="bottomArtist">Mohit Chauhan, Pritam</small>
+                </div>
+            </div>
+
+            <!-- CONTROLS -->
+            <div class="bottom-controls">
+                <button id="bottomShuffle" aria-label="Shuffle" title="Shuffle">
+                    <i class="fa-solid fa-shuffle"></i>
+                </button>
+
+                <button id="bottomPrevious" aria-label="Previous" title="Previous">
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
+
+                <button class="bottom-play" id="bottomPlay" aria-label="Play" title="Play">
+                    <i class="fa-solid fa-play"></i>
+                </button>
+
+                <button id="bottomNext" aria-label="Next" title="Next">
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
+
+                <button id="bottomRepeat" aria-label="Repeat" title="Repeat">
+                    <i class="fa-solid fa-repeat"></i>
+                </button>
+            </div>
+
+            <!-- VOLUME -->
+            <div class="volume-area">
+                <button id="volumeButton" class="volume-button" aria-label="Mute" title="Mute (M)">
+                    <i class="fa-solid fa-volume-high" id="volumeIcon"></i>
+                </button>
+                <input type="range" min="0" max="100" value="75" id="volumeSlider" aria-label="Volume">
+            </div>
+
+            <!-- LIVE LISTENERS -->
+            <div class="bottom-listeners">
+                <span><i class="fa-solid fa-headphones"></i></span>
+                <strong id="bottomListeners">1,240</strong>
+                <small>Live Listeners</small>
+            </div>
+
+            <!-- COLLAPSE -->
+            <button class="collapse-player" id="collapsePlayer" aria-label="Collapse player">
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+    <!-- =====================================================
+         MODALS
+    ====================================================== -->
+
+    <!-- EXPLORE MODAL -->
+    <div class="mehfil-modal-overlay" id="exploreModal">
+        <div class="mehfil-modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-compass"></i> Explore Sangeet Library</h2>
+                <button class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="explore-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="exploreSearchInput" class="explore-search-input" placeholder="Search by song, singer, movie, or lyrics...">
+                </div>
+                <div class="mood-filter-chips">
+                    <button class="mood-chip active" data-mood="all">All Moods</button>
+                    <button class="mood-chip" data-mood="love">Love</button>
+                    <button class="mood-chip" data-mood="dard">Dard</button>
+                    <button class="mood-chip" data-mood="sukoon">Sukoon</button>
+                    <button class="mood-chip" data-mood="safar">Safar</button>
+                    <button class="mood-chip" data-mood="happy">Happy</button>
+                    <button class="mood-chip" data-mood="late-night">Late Night</button>
+                </div>
+                <div class="songs-grid-list" id="exploreSongsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- REQUESTS MODAL (FARMAISH CORNER) -->
+    <div class="mehfil-modal-overlay" id="requestsModal">
+        <div class="mehfil-modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-message"></i> Farmaish Corner (Song Requests)</h2>
+                <button class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="request-banner">
+                    <i class="fa-solid fa-record-vinyl"></i>
+                    <div>
+                        <strong>Dil Ki Farmaish Bhejo</strong>
+                        <p style="font-size:0.85rem; color:var(--muted); margin-top:2px;">Request your favorite song with a personal dedication note. Listeners can upvote and queue it!</p>
+                    </div>
+                </div>
+
+                <form class="request-form" id="requestSongForm">
+                    <div class="form-group-row">
+                        <input type="text" id="reqTitle" class="form-control" placeholder="Song Title (e.g. Tum Ho)" required>
+                        <input type="text" id="reqArtist" class="form-control" placeholder="Singer / Artist (e.g. Mohit Chauhan)">
+                    </div>
+                    <div class="form-group-row">
+                        <select id="reqMood" class="form-control">
+                            <option value="love">Mood: Love</option>
+                            <option value="dard">Mood: Dard</option>
+                            <option value="sukoon">Mood: Sukoon</option>
+                            <option value="safar">Mood: Safar</option>
+                            <option value="happy">Mood: Happy</option>
+                            <option value="late-night">Mood: Late Night</option>
+                        </select>
+                        <input type="text" id="reqName" class="form-control" placeholder="Your Name / Handle">
+                    </div>
+                    <input type="text" id="reqDedication" class="form-control" placeholder="Dedication note (e.g. For college hostel midnight memories...)">
+                    <button type="submit" class="submit-req-btn">Send Farmaish to Mehfil</button>
+                </form>
+
+                <h3 style="font-size:1.05rem; margin-bottom:12px; color:var(--text);"><i class="fa-solid fa-list-ol" style="color:var(--accent);"></i> Live Community Queue</h3>
+                <div id="requestsQueueList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COMMUNITY MODAL (MEHFIL BAITHAK) -->
+    <div class="mehfil-modal-overlay" id="communityModal">
+        <div class="mehfil-modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-users"></i> Mehfil Baithak (Live Lounge)</h2>
+                <button class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="community-chat-wrap">
+                    <div class="community-messages-stream" id="communityMessagesStream"></div>
+
+                    <form class="chat-input-row" id="communityChatForm">
+                        <input type="text" id="chatTextInput" class="form-control" placeholder="Share a feeling, memory, or shayari..." required autocomplete="off">
+                        <div class="chat-controls-sub">
+                            <label class="shayari-toggle">
+                                <input type="checkbox" id="isShayariCheckbox">
+                                <span>Tag as Shayari / Poetry</span>
+                            </label>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span id="myUserBadge" style="font-size:0.8rem; color:var(--muted);"></span>
+                                <button type="submit" class="send-msg-btn">Post <i class="fa-solid fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAVORITES MODAL -->
+    <div class="mehfil-modal-overlay" id="favoritesModal">
+        <div class="mehfil-modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-heart" style="color:var(--accent);"></i> Liked Songs</h2>
+                <button class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="songs-grid-list" id="favoritesList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABOUT MODAL -->
+    <div class="mehfil-modal-overlay" id="aboutModal">
+        <div class="mehfil-modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-circle-info"></i> About Mehfil</h2>
+                <button class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" style="line-height:1.6; font-size:0.92rem; color: #ddd;">
+                <p><strong style="color: #fff; font-size:1.1rem;">MEHFIL — Jahan Har Mood Ka Ek Gaana Hai</strong> is an ambient Indian radio sanctuary. Inspired by vintage transistor radios and late-night music salons, Mehfil gathers listeners under one audio sky.</p>
+
+                <div style="margin: 18px 0; padding: 14px; background: rgba(255,255,255,0.04); border-radius: 12px; border: 1px solid var(--border);">
+                    <h4 style="color:var(--accent); margin-bottom: 6px;"><i class="fa-solid fa-server"></i> Full-Stack Real-Time Architecture</h4>
+                    <p style="font-size: 0.85rem; color: var(--muted);">Powered by Node.js, Express, high-performance SQLite, and Socket.IO real-time WebSockets. Features live synchronized radio broadcast, audience presence, dynamic mood metrics, real-time Farmaish (requests) queue, and live Baithak chat lounge.</p>
+                </div>
+
+                <h4 style="margin-top:20px; color:#fff;"><i class="fa-solid fa-keyboard" style="color:var(--accent);"></i> Keyboard Shortcuts</h4>
+                <table class="shortcut-table">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><kbd>Space</kbd></td><td>Play / Pause audio</td></tr>
+                        <tr><td><kbd>N</kbd> or <kbd>→</kbd></td><td>Next melody</td></tr>
+                        <tr><td><kbd>P</kbd> or <kbd>←</kbd></td><td>Previous melody</td></tr>
+                        <tr><td><kbd>M</kbd></td><td>Mute / Unmute</td></tr>
+                        <tr><td><kbd>S</kbd></td><td>Toggle Shuffle</td></tr>
+                        <tr><td><kbd>R</kbd></td><td>Toggle Repeat</td></tr>
+                        <tr><td><kbd>1</kbd> – <kbd>6</kbd></td><td>Switch Mood (Love, Dard, Sukoon, Safar, Happy, Late Night)</td></tr>
+                        <tr><td><kbd>Esc</kbd></td><td>Close any open overlay / modal</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobileMenu">
+        <button class="close-menu" id="closeMenu" aria-label="Close menu">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <a href="#"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="#explore"><i class="fa-solid fa-compass"></i> Explore</a>
+        <a href="#requests"><i class="fa-regular fa-message"></i> Requests</a>
+        <a href="#community"><i class="fa-solid fa-users"></i> Community</a>
+        <a href="#favorites"><i class="fa-regular fa-heart"></i> Favorites</a>
+        <a href="#about"><i class="fa-solid fa-circle-info"></i> About</a>
+    </div>
+
+    <!-- YOUTUBE AUDIO ENGINE -->
+    <div class="youtube-engine" aria-hidden="true">
+        <div id="youtubePlayer"></div>
+    </div>
+
+    <!-- SOCKET.IO CLIENT SCRIPT -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <!-- PROJECT SCRIPTS -->
+    <script src="js/api.js"></script>
+    <script src="js/socket.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/visualizer.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

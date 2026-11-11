@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.env
+server/db/mehfil.db
+server/db/mehfil.db-journal
+server/db/mehfil-store.json
+.DS_Store

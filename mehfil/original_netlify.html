@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>MEHFIL — Jahan Har Mood Ka Ek Gaana Hai</title>
+
+    <meta
+        name="description"
+        content="MEHFIL — Jahan har mood ka ek gaana hai. Listen, feel and connect."
+    >
+
+    <!-- =====================================================
+         FONTS
+    ====================================================== -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <!-- =====================================================
+         FONT AWESOME — WEB ICONS
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+    >
+
+    <!-- =====================================================
+         MAIN CSS
+    ====================================================== -->
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+
+<body class="mood-love">
+
+    <!-- =====================================================
+         BACKGROUND
+    ====================================================== -->
+
+    <div class="background">
+
+        <div class="background-image"></div>
+
+        <div class="background-overlay"></div>
+
+        <div class="noise"></div>
+
+        <div
+            class="particles"
+            id="particles"
+        ></div>
+
+        <div class="ambient-glow glow-one"></div>
+        <div class="ambient-glow glow-two"></div>
+
+    </div>
+
+
+    <!-- =====================================================
+         APP
+    ====================================================== -->
+
+    <div class="app">
+
+
+        <!-- =================================================
+             HEADER
+        ================================================== -->
+
+        <header class="header">
+
+
+            <!-- BRAND -->
+
+            <a
+                href="#"
+                class="brand"
+                aria-label="MEHFIL Home"
+            >
+
+                <div class="brand-icon">
+
+                    <i class="fa-solid fa-radio"></i>
+
+                </div>
+
+
+                <div class="brand-text">
+
+                    <h1>MEHFIL</h1>
+
+                    <p>
+                        JAHAN HAR MOOD KA<br>
+                        EK GAANA HAI
+                    </p>
+
+                </div>
+
+            </a>
+
+
+            <!-- NAVIGATION -->
+
+            <nav class="navigation">
+
+                <a
+                    href="#"
+                    class="nav-link active"
+                >
+                    <i class="fa-solid fa-house"></i>
+                    <span>Home</span>
+                </a>
+
+
+                <a
+                    href="#explore"
+                    class="nav-link"
+                >
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Explore</span>
+                </a>
+
+
+                <a
+                    href="#requests"
+                    class="nav-link"
+                >
+                    <i class="fa-regular fa-message"></i>
+                    <span>Requests</span>
+                </a>
+
+
+                <a
+                    href="#community"
+                    class="nav-link"
+                >
+                    <i class="fa-solid fa-users"></i>
+                    <span>Community</span>
+                </a>
+
+
+                <a
+                    href="#about"
+                    class="nav-link"
+                >
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>About</span>
+                </a>
+
+            </nav>
+
+
+            <!-- LIVE STATUS -->
+
+            <div class="header-live">
+
+                <span class="live-dot"></span>
+
+                <span class="live-text">
+                    LIVE
+                </span>
+
+                <span class="header-divider"></span>
+
+                <i class="fa-solid fa-headphones listener-icon"></i>
+
+                <strong id="headerListeners">
+                    1,284
+                </strong>
+
+            </div>
+
+
+            <!-- MOBILE MENU -->
+
+            <button
+                class="menu-button"
+                id="menuButton"
+                aria-label="Open menu"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+        </header>
+
+
+        <!-- =================================================
+             MAIN
+        ================================================== -->
+
+        <main class="main">
+
+
+            <!-- =================================================
+                 MOOD SIDEBAR
+            ================================================== -->
+
+            <aside class="mood-sidebar">
+
+                <div class="sidebar-title">
+                    CHOOSE YOUR MOOD
+                </div>
+
+
+                <!-- LOVE -->
+
+                <button
+                    class="mood-button active"
+                    data-mood="love"
+                >
+
+                    <span class="mood-icon love-icon">
+                        <i class="fa-solid fa-heart"></i>
+                    </span>
+
+                    <span class="mood-name">
+                        Love
+                    </span>
+
+                </button>
+
+
+                <!-- DARD -->
+
+                <button
+                    class="mood-button"
+                    data-mood="dard"
+                >
+
+                    <span class="mood-icon dard-icon">
+                        <i class="fa-solid fa-heart-crack"></i>
+                    </span>
+
+                    <span class="mood-name">
+                        Dard
+                    </span>
+
+                </button>
+
+
+                <!-- SUKOON -->
+
+                <button
+                    class="mood-button"
+                    data-mood="sukoon"
+                >
+
+                    <span class="mood-icon sukoon-icon">
+                        <i class="fa-solid fa-spa"></i>
+                    </span>
+
+                    <span class="mood-name">
+                        Sukoon
+                    </span>
+
+                </button>
+
+
+                <!-- SAFAR -->
+
+                <button
+                    class="mood-button"
+                    data-mood="safar"
+                >
+
+                    <span class="mood-icon safar-icon">
+                        <i class="fa-solid fa-road"></i>
+                    </span>
+
+                    <span class="mood-name">
+                        Safar
+                    </span>
+
+                </button>
+
+
+                <!-- HAPPY -->
+
+                <button
+                    class="mood-button"
+                    data-mood="happy"
+                >
+
+                    <span class="mood-icon happy-icon">
+                        <i class="fa-solid fa-sun"></i>
+                    </span>
+
+                    <span class="mood-name">
+                        Happy
+                    </span>
+
+                </button>
+
+
+                <!-- LATE NIGHT -->
+
+                <button
+                    class="mood-button"
+                    data-mood="late-night"
+                >
+
+                    <span class="mood-icon night-icon">
+                        <i class="fa-solid fa-moon"></i>
+                    </span>
+
+                    <span class="mood-name">
+                        Late Night
+                    </span>
+
+                </button>
+
+
+                <!-- SURPRISE -->
+
+                <button
+                    class="surprise-button"
+                    id="surpriseButton"
+                >
+
+                    <span class="surprise-icon">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </span>
+
+                    <span>
+
+                        <strong>
+                            Surprise Me
+                        </strong>
+
+                        <small>
+                            Mehfil will decide
+                        </small>
+
+                    </span>
+
+                </button>
+
+            </aside>
+
+
+            <!-- =================================================
+                 CENTER
+            ================================================== -->
+
+            <section class="center-content">
+
+
+                <!-- MOOD INTRO -->
+
+                <div class="mood-intro">
+
+                    <span class="you-are">
+                        YOU ARE IN
+                    </span>
+
+                    <h2 id="moodTitle">
+                        LOVE
+                    </h2>
+
+                    <p id="moodQuote">
+                        “Pyaar ke gaane,
+                        dil se dil tak.”
+                    </p>
+
+
+                    <button
+                        class="mood-action"
+                        id="moodAction"
+                    >
+
+                        WHY LOVE?
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </button>
+
+                </div>
+
+
+                <!-- AUDIO WAVE -->
+
+                <div
+                    class="audio-wave"
+                    id="audioWave"
+                    aria-hidden="true"
+                >
+
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+
+                </div>
+
+
+                <!-- =================================================
+                     PLAYER
+                ================================================== -->
+
+                <div class="player-card">
+
+
+                    <!-- ALBUM / MOOD VISUAL -->
+
+                    <div class="album-cover">
+
+                        <div class="cover-inner">
+
+                            <span class="cover-icon">
+                                <i class="fa-solid fa-music"></i>
+                            </span>
+
+                            <span class="cover-title">
+                                MEHFIL
+                            </span>
+
+                            <span class="cover-small">
+                                MOOD RADIO
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- TRACK -->
+
+                    <div class="track-section">
+
+
+                        <div class="track-meta">
+
+                            <span>
+                                <i class="fa-solid fa-wave-square"></i>
+                                NOW PLAYING
+                            </span>
+
+                            <button
+                                class="favorite-button"
+                                id="favoriteButton"
+                                aria-label="Add to favorites"
+                            >
+                                <i class="fa-regular fa-heart"></i>
+                            </button>
+
+                        </div>
+
+
+                        <h3 id="songTitle">
+                            Kuch Kuch Hota Hai
+                        </h3>
+
+
+                        <p id="songArtist">
+                            Udit Narayan, Alka Yagnik
+                        </p>
+
+
+                        <!-- PROGRESS -->
+
+                        <div class="progress-container">
+
+                            <div
+                                class="progress-bar"
+                                id="progressBar"
+                                role="slider"
+                                aria-label="Song progress"
+                            >
+
+                                <div
+                                    class="progress-fill"
+                                    id="progressFill"
+                                ></div>
+
+                            </div>
+
+
+                            <div class="time-row">
+
+                                <span id="currentTime">
+                                    00:00
+                                </span>
+
+                                <span id="duration">
+                                    05:32
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- PLAYER CONTROLS -->
+
+                        <div class="player-controls">
+
+
+                            <button
+                                class="small-control"
+                                id="shuffleButton"
+                                aria-label="Shuffle"
+                                title="Shuffle"
+                            >
+                                <i class="fa-solid fa-shuffle"></i>
+                            </button>
+
+
+                            <button
+                                class="small-control"
+                                id="previousButton"
+                                aria-label="Previous"
+                                title="Previous"
+                            >
+                                <i class="fa-solid fa-backward-step"></i>
+                            </button>
+
+
+                            <button
+                                class="main-play"
+                                id="playButton"
+                                aria-label="Play"
+                                title="Play"
+                            >
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+
+
+                            <button
+                                class="small-control"
+                                id="nextButton"
+                                aria-label="Next"
+                                title="Next"
+                            >
+                                <i class="fa-solid fa-forward-step"></i>
+                            </button>
+
+
+                            <button
+                                class="small-control"
+                                id="repeatButton"
+                                aria-label="Repeat"
+                                title="Repeat"
+                            >
+                                <i class="fa-solid fa-repeat"></i>
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- LIVE MESSAGE -->
+
+                <div class="live-message">
+
+                    <span class="live-pulse"></span>
+
+                    <span>
+
+                        You're listening with
+
+                        <strong id="centerListeners">
+                            1,284
+                        </strong>
+
+                        others
+
+                    </span>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 RIGHT SIDEBAR
+            ================================================== -->
+
+            <aside class="right-sidebar">
+
+
+                <div class="live-panel">
+
+
+                    <!-- LIVE HEADER -->
+
+                    <div class="panel-heading">
+
+                        <span class="live-dot"></span>
+
+                        <span>
+                            LIVE MEHFIL
+                        </span>
+
+                    </div>
+
+
+                    <!-- LISTENER COUNT -->
+
+                    <div class="big-listener-count">
+
+                        <strong id="liveListeners">
+                            1,284
+                        </strong>
+
+                        <span>
+                            people are listening
+                            <br>
+                            right now
+                        </span>
+
+                    </div>
+
+
+                    <!-- LISTENER AVATARS -->
+
+                    <div class="listener-avatars">
+
+                        <div>
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+
+                        <div>
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+
+                        <div>
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+
+                        <div>
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+
+                        <div>
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+
+                        <div>
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+
+                        <div>
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+
+                        <span id="extraListeners">
+                            +124
+                        </span>
+
+                    </div>
+
+
+                    <div class="panel-divider"></div>
+
+
+                    <!-- MOOD STATS -->
+
+                    <h4>
+                        LISTENERS BY MOOD
+                    </h4>
+
+
+                    <div class="mood-stats">
+
+
+                        <div class="mood-stat">
+
+                            <span class="stat-dot love-dot"></span>
+
+                            <span>
+                                Love
+                            </span>
+
+                            <strong id="loveCount">
+                                428
+                            </strong>
+
+                        </div>
+
+
+                        <div class="mood-stat">
+
+                            <span class="stat-dot dard-dot"></span>
+
+                            <span>
+                                Dard
+                            </span>
+
+                            <strong id="dardCount">
+                                216
+                            </strong>
+
+                        </div>
+
+
+                        <div class="mood-stat">
+
+                            <span class="stat-dot sukoon-dot"></span>
+
+                            <span>
+                                Sukoon
+                            </span>
+
+                            <strong id="sukoonCount">
+                                304
+                            </strong>
+
+                        </div>
+
+
+                        <div class="mood-stat">
+
+                            <span class="stat-dot safar-dot"></span>
+
+                            <span>
+                                Safar
+                            </span>
+
+                            <strong id="safarCount">
+                                187
+                            </strong>
+
+                        </div>
+
+
+                        <div class="mood-stat">
+
+                            <span class="stat-dot happy-dot"></span>
+
+                            <span>
+                                Happy
+                            </span>
+
+                            <strong id="happyCount">
+                                149
+                            </strong>
+
+                        </div>
+
+
+                        <div class="mood-stat">
+
+                            <span class="stat-dot night-dot"></span>
+
+                            <span>
+                                Late Night
+                            </span>
+
+                            <strong id="nightCount">
+                                149
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="panel-divider"></div>
+
+
+                    <!-- RECENTLY PLAYED -->
+
+                    <div class="recent-header">
+
+                        <h4>
+                            RECENTLY PLAYED
+                        </h4>
+
+                        <button
+                            id="viewAllRecent"
+                            type="button"
+                        >
+                            VIEW ALL
+                        </button>
+
+                    </div>
+
+
+                    <div
+                        class="recent-list"
+                        id="recentList"
+                    >
+
+
+                        <!-- RECENT 1 -->
+
+                        <button
+                            class="recent-song"
+                            type="button"
+                            data-song-title="Pehla Nasha"
+                            data-song-artist="Udit Narayan, Sadhana Sargam"
+                        >
+
+                            <span class="mini-cover">
+                                <i class="fa-solid fa-music"></i>
+                            </span>
+
+                            <span class="recent-info">
+
+                                <strong>
+                                    Pehla Nasha
+                                </strong>
+
+                                <small>
+                                    Udit Narayan, Sadhana Sargam
+                                </small>
+
+                            </span>
+
+                            <span class="recent-play-icon">
+                                <i class="fa-solid fa-play"></i>
+                            </span>
+
+                        </button>
+
+
+                        <!-- RECENT 2 -->
+
+                        <button
+                            class="recent-song"
+                            type="button"
+                            data-song-title="Tujhe Dekha To"
+                            data-song-artist="Kumar Sanu, Lata Mangeshkar"
+                        >
+
+                            <span class="mini-cover">
+                                <i class="fa-solid fa-music"></i>
+                            </span>
+
+                            <span class="recent-info">
+
+                                <strong>
+                                    Tujhe Dekha To
+                                </strong>
+
+                                <small>
+                                    Kumar Sanu, Lata Mangeshkar
+                                </small>
+
+                            </span>
+
+                            <span class="recent-play-icon">
+                                <i class="fa-solid fa-play"></i>
+                            </span>
+
+                        </button>
+
+
+                        <!-- RECENT 3 -->
+
+                        <button
+                            class="recent-song"
+                            type="button"
+                            data-song-title="Kal Ho Naa Ho"
+                            data-song-artist="Sonu Nigam"
+                        >
+
+                            <span class="mini-cover">
+                                <i class="fa-solid fa-music"></i>
+                            </span>
+
+                            <span class="recent-info">
+
+                                <strong>
+                                    Kal Ho Naa Ho
+                                </strong>
+
+                                <small>
+                                    Sonu Nigam
+                                </small>
+
+                            </span>
+
+                            <span class="recent-play-icon">
+                                <i class="fa-solid fa-play"></i>
+                            </span>
+
+                        </button>
+
+
+                        <!-- RECENT 4 -->
+
+                        <button
+                            class="recent-song"
+                            type="button"
+                            data-song-title="Agar Tum Saath Ho"
+                            data-song-artist="Alka Yagnik, Arijit Singh"
+                        >
+
+                            <span class="mini-cover">
+                                <i class="fa-solid fa-music"></i>
+                            </span>
+
+                            <span class="recent-info">
+
+                                <strong>
+                                    Agar Tum Saath Ho
+                                </strong>
+
+                                <small>
+                                    Alka Yagnik, Arijit Singh
+                                </small>
+
+                            </span>
+
+                            <span class="recent-play-icon">
+                                <i class="fa-solid fa-play"></i>
+                            </span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </aside>
+
+        </main>
+
+
+        <!-- =================================================
+             BOTTOM PLAYER
+        ================================================== -->
+
+        <div class="bottom-player">
+
+
+            <!-- RADIO -->
+
+            <div class="bottom-radio">
+
+                <div class="radio-live-icon">
+
+                    <i class="fa-solid fa-radio"></i>
+
+                </div>
+
+                <div>
+
+                    <strong>
+                        MEHFIL RADIO
+                    </strong>
+
+                    <small>
+                        24×7 LIVE · NON STOP
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <!-- CURRENT TRACK -->
+
+            <div class="bottom-track">
+
+                <div class="bottom-cover">
+
+                    <i class="fa-solid fa-music"></i>
+
+                </div>
+
+                <div>
+
+                    <strong id="bottomSong">
+                        Kuch Kuch Hota Hai
+                    </strong>
+
+                    <small id="bottomArtist">
+                        Udit Narayan, Alka Yagnik
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <!-- CONTROLS -->
+
+            <div class="bottom-controls">
+
+
+                <button
+                    id="bottomShuffle"
+                    aria-label="Shuffle"
+                    title="Shuffle"
+                >
+                    <i class="fa-solid fa-shuffle"></i>
+                </button>
+
+
+                <button
+                    id="bottomPrevious"
+                    aria-label="Previous"
+                    title="Previous"
+                >
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
+
+
+                <button
+                    class="bottom-play"
+                    id="bottomPlay"
+                    aria-label="Play"
+                    title="Play"
+                >
+                    <i class="fa-solid fa-play"></i>
+                </button>
+
+
+                <button
+                    id="bottomNext"
+                    aria-label="Next"
+                    title="Next"
+                >
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
+
+
+                <button
+                    id="bottomRepeat"
+                    aria-label="Repeat"
+                    title="Repeat"
+                >
+                    <i class="fa-solid fa-repeat"></i>
+                </button>
+
+            </div>
+
+
+            <!-- VOLUME -->
+
+            <div class="volume-area">
+
+                <button
+                    id="volumeButton"
+                    class="volume-button"
+                    aria-label="Mute"
+                    title="Mute"
+                >
+                    <i
+                        class="fa-solid fa-volume-high"
+                        id="volumeIcon"
+                    ></i>
+                </button>
+
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="75"
+                    id="volumeSlider"
+                    aria-label="Volume"
+                >
+
+            </div>
+
+
+            <!-- LIVE LISTENERS -->
+
+            <div class="bottom-listeners">
+
+                <span>
+                    <i class="fa-solid fa-headphones"></i>
+                </span>
+
+                <strong id="bottomListeners">
+                    1,284
+                </strong>
+
+                <small>
+                    Live Listeners
+                </small>
+
+            </div>
+
+
+            <!-- COLLAPSE -->
+
+            <button
+                class="collapse-player"
+                id="collapsePlayer"
+                aria-label="Collapse player"
+            >
+                <i class="fa-solid fa-chevron-down"></i>
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         MOBILE MENU
+    ====================================================== -->
+
+    <div
+        class="mobile-menu"
+        id="mobileMenu"
+    >
+
+        <button
+            class="close-menu"
+            id="closeMenu"
+            aria-label="Close menu"
+        >
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+
+        <a href="#">
+            <i class="fa-solid fa-house"></i>
+            Home
+        </a>
+
+        <a href="#explore">
+            <i class="fa-solid fa-compass"></i>
+            Explore
+        </a>
+
+        <a href="#requests">
+            <i class="fa-regular fa-message"></i>
+            Requests
+        </a>
+
+        <a href="#community">
+            <i class="fa-solid fa-users"></i>
+            Community
+        </a>
+
+        <a href="#about">
+            <i class="fa-solid fa-circle-info"></i>
+            About
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         YOUTUBE AUDIO ENGINE
+         Invisible — NO BLACK BOX
+    ====================================================== -->
+
+    <div
+        class="youtube-engine"
+        aria-hidden="true"
+    >
+        <div id="youtubePlayer"></div>
+    </div>
+
+
+    <!-- =====================================================
+         FIREBASE
+    ====================================================== -->
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+
+    <!-- =====================================================
+         PROJECT SCRIPTS
+    ====================================================== -->
+
+    <script src="firebase.js"></script>
+
+    <script src="player.js"></script>
+
+    <script src="songs.js"></script>
+
+    <script src="script.js"></script>
+
+
+</body>
+</html>

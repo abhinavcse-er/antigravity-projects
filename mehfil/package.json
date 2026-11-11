@@ -1,0 +1,30 @@
+{
+  "name": "mehfil-fullstack",
+  "version": "1.0.0",
+  "description": "MEHFIL — Jahan Har Mood Ka Ek Gaana Hai. Full-stack real-time music radio & community.",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "keywords": [
+    "mehfil",
+    "music",
+    "radio",
+    "hindi-songs",
+    "bollywood",
+    "ambient",
+    "full-stack",
+    "socketio"
+  ],
+  "author": "Mehfil Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "serverless-http": "^4.0.0",
+    "socket.io": "^4.8.1"
+  }
+}
