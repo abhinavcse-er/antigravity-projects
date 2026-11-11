@@ -5853,3 +5853,388 @@ body.mood-changing .background-image {
         touch-action: manipulation;
     }
 }
+
+
+/* =========================================================
+   FINAL DEVICE FIT — tablet and phone overrides
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .header {
+        width: calc(100% - 32px);
+        gap: 10px;
+    }
+
+    .header .mode-toggle-btn {
+        display: none !important;
+    }
+
+    .header .menu-button {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 42px;
+    }
+
+    .main {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .center-content,
+    .mood-sidebar,
+    .right-sidebar {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .player-card {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: none;
+    }
+
+    .album-cover {
+        width: min(100%, 240px);
+        min-width: 0;
+        height: auto;
+        aspect-ratio: 1;
+        margin-inline: auto;
+    }
+
+    .track-section {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: clip;
+    }
+
+    .header,
+    .main {
+        width: calc(100% - 24px);
+    }
+
+    .header {
+        min-height: calc(62px + env(safe-area-inset-top));
+        padding-top: env(safe-area-inset-top);
+        gap: 7px;
+    }
+
+    .brand {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .brand-icon {
+        flex: 0 0 38px;
+    }
+
+    .header-live {
+        flex: 0 0 auto;
+        margin-left: auto;
+        padding: 6px 8px;
+    }
+
+    .main {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .mood-sidebar {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+        padding: 10px;
+        position: static;
+    }
+
+    .mood-button {
+        min-width: 0;
+        min-height: 62px;
+        padding: 6px 3px;
+        margin: 0;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        transform: none !important;
+    }
+
+    .mood-name {
+        max-width: 100%;
+        font-size: 10px;
+        line-height: 1.2;
+        overflow-wrap: anywhere;
+    }
+
+    .center-content {
+        width: 100%;
+        padding: 4px 0 8px;
+    }
+
+    .mehfil-quick-search {
+        display: flex;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        gap: 8px;
+        padding: 7px 8px 7px 12px;
+        margin: 0 auto 16px;
+    }
+
+    .mehfil-quick-search input {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        font-size: 14px;
+    }
+
+    .mehfil-quick-search button {
+        flex: 0 0 auto;
+        min-width: 42px;
+        min-height: 42px;
+        padding: 9px 11px;
+    }
+
+    .mehfil-search-suggestions {
+        left: 0;
+        right: 0;
+        width: 100%;
+        max-width: 100%;
+        max-height: min(42dvh, 310px);
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+    }
+
+    .mehfil-suggestion,
+    .mehfil-suggestion-details {
+        min-width: 0;
+    }
+
+    .mood-intro {
+        padding: 0;
+        text-align: center;
+    }
+
+    .mood-intro h2 {
+        font-size: clamp(42px, 13vw, 64px);
+        line-height: 1;
+        letter-spacing: -1.5px;
+        overflow-wrap: anywhere;
+    }
+
+    .mood-intro p {
+        max-width: 32ch;
+        margin: 10px auto 0;
+        font-size: 15px;
+    }
+
+    .audio-wave {
+        justify-content: center;
+        height: 34px;
+        margin: 14px 0;
+    }
+
+    .player-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .album-cover {
+        width: min(62vw, 210px);
+        max-width: 210px;
+        min-width: 0;
+        height: auto;
+        aspect-ratio: 1;
+    }
+
+    .track-section,
+    .track-section h3,
+    .track-section > p,
+    #lyricsSnippet {
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    .track-section {
+        text-align: center;
+    }
+
+    .track-meta,
+    .player-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .player-controls button,
+    .favorite-button,
+    .quick-reactions .reaction-btn,
+    .menu-button {
+        min-width: 42px;
+        min-height: 42px;
+    }
+
+    .right-sidebar {
+        width: 100%;
+        min-width: 0;
+        margin: 0 0 12px;
+    }
+
+    .live-panel {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        padding: 14px;
+        overflow: hidden;
+    }
+
+    .quick-reactions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 6px;
+    }
+
+    .quick-reactions .reaction-btn {
+        flex: 1 1 38px;
+    }
+
+    .creator-credit {
+        width: calc(100% - 24px);
+        max-width: 100%;
+        margin: 12px auto 18px;
+        flex-wrap: wrap;
+    }
+
+    .bottom-player {
+        position: fixed;
+        z-index: 950;
+        left: 50%;
+        right: auto;
+        bottom: max(7px, env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        width: calc(100% - 16px);
+        max-width: 560px;
+        min-width: 0;
+        min-height: 60px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 9px;
+    }
+
+    .bottom-radio,
+    .bottom-listeners,
+    .volume-area,
+    .collapse-player {
+        display: none !important;
+    }
+
+    .bottom-track {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 8px;
+        overflow: hidden;
+    }
+
+    .bottom-track > div:last-child {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .bottom-track strong,
+    .bottom-track small {
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .bottom-controls {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 3px;
+    }
+
+    .bottom-controls button:not(.bottom-play) {
+        display: none !important;
+    }
+
+    .bottom-controls .bottom-play {
+        width: 42px;
+        min-width: 42px;
+        height: 42px;
+        min-height: 42px;
+    }
+
+    .app {
+        padding-bottom: calc(112px + env(safe-area-inset-bottom));
+    }
+
+    .mehfil-modal-overlay {
+        padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+    }
+
+    .mehfil-modal {
+        width: 100%;
+        max-width: 100%;
+        max-height: 88dvh;
+        overflow-y: auto;
+    }
+
+    .form-group-row {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 380px) {
+    .header,
+    .main {
+        width: calc(100% - 16px);
+    }
+
+    .header-live {
+        padding: 6px;
+    }
+
+    .mood-sidebar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mehfil-quick-search button span {
+        display: none;
+    }
+
+    .bottom-player {
+        width: calc(100% - 12px);
+        padding-inline: 7px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .background-image,
+    .particle,
+    .live-dot,
+    .live-pulse,
+    .audio-wave span {
+        animation: none !important;
+    }
+}
