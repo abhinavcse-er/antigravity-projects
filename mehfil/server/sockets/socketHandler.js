@@ -2,91 +2,87 @@ const presenceService = require('../services/presenceService');
 const radioService = require('../services/radioService');
 const db = require('../db/database');
 
+let presenceBroadcastTimer = null;
+
+// Coalesce connection and mood bursts into one audience update instead of
+// broadcasting a full presence snapshot for every individual socket event.
+function schedulePresenceBroadcast(io) {
+  if (presenceBroadcastTimer) return;
+  presenceBroadcastTimer = setTimeout(() => {
+    presenceBroadcastTimer = null;
+    io.emit('presence:update', presenceService.getStats());
+  }, 300);
+}
+
 function setupSockets(io) {
   io.on('connection', (socket) => {
-    // Register new listener
     const initialMood = socket.handshake.query.mood || 'love';
     const client = presenceService.addClient(socket.id, initialMood);
 
-    console.log(`[SOCKET] Listener joined: ${client.nickname} (${client.mood}) [Total active: ${presenceService.clients.size}]`);
-
-    // Send welcome packet with their identity and current stats
+    // The joining client receives its own current snapshot in the welcome event.
     socket.emit('presence:welcome', {
       user: client,
       stats: presenceService.getStats(),
       radio: radioService.getCurrentState()
     });
+    schedulePresenceBroadcast(io);
 
-    // Broadcast updated audience stats to all listeners
-    io.emit('presence:update', presenceService.getStats());
-
-    // User switches mood
     socket.on('mood:change', (newMood) => {
       const updated = presenceService.updateClientMood(socket.id, newMood);
-      if (updated) {
-        // Broadcast new audience distribution
-        io.emit('presence:update', presenceService.getStats());
-      }
+      if (updated) schedulePresenceBroadcast(io);
     });
 
-    // User sends community chat / shayari
-    socket.on('community:message', (data) => {
+    socket.on('community:message', (data = {}) => {
       const client = presenceService.getClient(socket.id);
+      const text = typeof data.text === 'string' ? data.text.trim().slice(0, 1000) : '';
+      if (!text) return;
       const newMsg = db.addCommunityMessage({
-        userName: data.userName || client?.nickname || 'Musafir',
+        userName: String(data.userName || client?.nickname || 'Musafir').slice(0, 60),
         userAvatar: data.userAvatar || client?.avatar || '🎶',
         mood: data.mood || client?.mood || 'love',
-        text: data.text,
+        text,
         isShayari: !!data.isShayari
       });
       io.emit('community:message', newMsg);
     });
 
-    // User clicks a live reaction (floating heart/flower/tea)
-    socket.on('community:reaction', (reaction) => {
+    socket.on('community:reaction', (reaction = {}) => {
       const client = presenceService.getClient(socket.id);
+      const allowedReactions = new Set(['❤️', '☕', '🎶', '🌧️', '🥀', '🔥']);
+      const value = allowedReactions.has(reaction.type) ? reaction.type : '❤️';
       io.emit('community:reaction', {
-        reaction: reaction.type || '❤️',
+        reaction: value,
         user: client?.nickname || 'Dost',
         timestamp: Date.now()
       });
     });
 
-    // User requests a song
-    socket.on('request:new', (data) => {
+    socket.on('request:new', (data = {}) => {
       const client = presenceService.getClient(socket.id);
+      const songTitle = typeof data.songTitle === 'string' ? data.songTitle.trim().slice(0, 160) : '';
+      if (!songTitle) return;
       const newRequest = db.addRequest({
-        songTitle: data.songTitle,
-        artist: data.artist,
+        songTitle,
+        artist: String(data.artist || '').slice(0, 100),
         mood: data.mood || client?.mood || 'love',
-        requesterName: data.requesterName || client?.nickname || 'Mehfil Dost',
-        dedication: data.dedication
+        requesterName: String(data.requesterName || client?.nickname || 'Mehfil Dost').slice(0, 60),
+        dedication: String(data.dedication || '').slice(0, 500)
       });
       io.emit('request:new', newRequest);
     });
 
-    // User votes on a request
     socket.on('request:vote', (requestId) => {
       const updated = db.voteRequest(requestId);
-      if (updated) {
-        io.emit('request:vote', updated);
-      }
+      if (updated) io.emit('request:vote', updated);
     });
 
-    // Radio sync request
     socket.on('radio:sync', (callback) => {
-      if (typeof callback === 'function') {
-        callback(radioService.getCurrentState());
-      }
+      if (typeof callback === 'function') callback(radioService.getCurrentState());
     });
 
-    // Disconnect
     socket.on('disconnect', () => {
-      const removed = presenceService.removeClient(socket.id);
-      if (removed) {
-        console.log(`[SOCKET] Listener left: ${removed.nickname} [Active: ${presenceService.clients.size}]`);
-        io.emit('presence:update', presenceService.getStats());
-      }
+      presenceService.removeClient(socket.id);
+      schedulePresenceBroadcast(io);
     });
   });
 }
