@@ -46,7 +46,7 @@ class SongService {
   }
 
   async searchSongs(query, mood) {
-    const normalizedQuery = String(query || '').trim().replace(/\\s+/g, ' ');
+    const normalizedQuery = String(query || '').trim().replace(/\s+/g, ' ');
     if (!normalizedQuery) return [];
     const cacheKey = `${mood || 'all'}_${normalizedQuery}`.toLowerCase();
     const cached = searchCache.get(cacheKey);
