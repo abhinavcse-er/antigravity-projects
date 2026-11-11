@@ -44,32 +44,45 @@ function scoreResult(query, title, artist, description = '') {
   const t = normalize(title);
   const a = normalize(artist);
   const d = normalize(description);
-  const searchable = `${t} ${a} ${d}`;
   if (!q || !t) return 0;
 
-  let score = 0;
-  if (t === q) score += 120;
-  else if (t.startsWith(q)) score += 95;
-  else if (t.includes(q)) score += 78;
-  if (a === q) score += 85;
-  else if (a.includes(q)) score += 55;
+  // Ignore generic search words so "Kesariya song" still ranks by the title.
+  const ignored = new Set(['song', 'songs', 'music', 'video', 'audio', 'official', 'lyrics', 'lyrical']);
+  const tokens = q.split(' ').filter(token => token.length > 1 && !ignored.has(token));
+  const titleTokens = new Set(t.split(' '));
+  const artistTokens = new Set(a.split(' '));
+  const descriptionTokens = new Set(d.split(' '));
+  const usefulTokens = tokens.length ? tokens : q.split(' ');
 
-  const tokens = q.split(' ').filter(token => token.length > 1);
-  if (tokens.length) {
-    const titleHits = tokens.filter(token => t.includes(token)).length;
-    const artistHits = tokens.filter(token => a.includes(token)).length;
-    const metadataHits = tokens.filter(token => searchable.includes(token)).length;
-    score += Math.round((titleHits / tokens.length) * 48);
-    score += Math.round((artistHits / tokens.length) * 24);
-    score += Math.round((metadataHits / tokens.length) * 20);
-  }
+  let score = 0;
+  if (t === q) score += 160;
+  else if (t.startsWith(q)) score += 125;
+  else if (t.includes(q)) score += 105;
+
+  const titleHits = usefulTokens.filter(token => titleTokens.has(token)).length;
+  const artistHits = usefulTokens.filter(token => artistTokens.has(token)).length;
+  const descriptionHits = usefulTokens.filter(token => descriptionTokens.has(token)).length;
+  const total = usefulTokens.length || 1;
+  const titleCoverage = titleHits / total;
+  const artistCoverage = artistHits / total;
+
+  // Song title matches matter most; channel/artist and description are supporting signals.
+  score += Math.round(titleCoverage * 100);
+  score += Math.round(artistCoverage * 42);
+  score += Math.round((descriptionHits / total) * 12);
+
+  if (a && usefulTokens.some(token => artistTokens.has(token))) score += 8;
+  if (/\b(topic|records|music|vevo)\b/.test(a)) score += 5;
 
   const requested = q;
-  if (/\b(official|audio|video|lyrics|lyrical|song|songs|music)\b/.test(t)) score += 4;
-  if (!/\b(shorts?)\b/.test(requested) && /\bshorts?\b/.test(t)) score -= 35;
-  if (!/\blive\b/.test(requested) && /\blive\b/.test(t)) score -= 12;
-  if (!/\b(cover|karaoke|instrumental)\b/.test(requested) && /\b(cover|karaoke|instrumental)\b/.test(t)) score -= 18;
-  if (!/\b(remix|slowed|reverb|lofi)\b/.test(requested) && /\b(slowed|reverb|lofi)\b/.test(t)) score -= 12;
+  if (!/\b(shorts?)\b/.test(requested) && /\bshorts?\b/.test(t)) score -= 65;
+  if (!/\blive\b/.test(requested) && /\blive\b/.test(t)) score -= 24;
+  if (!/\b(cover|karaoke|instrumental|reaction|review)\b/.test(requested) && /\b(cover|karaoke|instrumental|reaction|review)\b/.test(t)) score -= 55;
+  if (!/\b(remix|slowed|reverb|lofi)\b/.test(requested) && /\b(slowed|reverb|lofi)\b/.test(t)) score -= 35;
+
+  // If a multi-word query barely matches the actual title, don't surface it as a suggestion.
+  if (usefulTokens.length > 1 && titleCoverage === 0 && artistCoverage === 0) return 0;
+  if (usefulTokens.length > 2 && titleCoverage + artistCoverage < 0.5) return 0;
   return score;
 }
 
@@ -158,7 +171,7 @@ class SongService {
               const artist = item.snippet?.channelTitle || 'Unknown artist';
               const description = item.snippet?.description || '';
               const score = scoreResult(query, title, artist, description);
-              if (score < 18) return null;
+              if (score < 32) return null;
 
               return {
                 id: 'yt_' + videoId,
@@ -200,7 +213,7 @@ class SongService {
     const dbResults = db.getSongs({ search: query, mood: mood || 'all', limit: 30 });
     return dbResults
       .map(song => ({ ...song, searchScore: scoreResult(query, song.title, song.artist) }))
-      .filter(song => song.searchScore >= 18)
+      .filter(song => song.searchScore >= 32)
       .sort((a, b) => b.searchScore - a.searchScore)
       .slice(0, 8)
       .map(({ searchScore, ...song }) => song);
