@@ -185,13 +185,13 @@
         };
 
         const searchSuggestions = async (query) => {
-            const normalizedQuery = String(query || "").trim().replace(/\\s+/g, " ");
+            const normalizedQuery = String(query || "").trim().replace(/\s+/g, " ");
             if (normalizedQuery.length < 2) return;
             const version = ++requestVersion;
             setSearchBusy(true);
             try {
                 const songs = await MehfilAPI.getSongs({ search: normalizedQuery, mood: "all", limit: 8 });
-                const currentQuery = input.value.trim().replace(/\\s+/g, " ");
+                const currentQuery = input.value.trim().replace(/\s+/g, " ");
                 if (version !== requestVersion || currentQuery !== normalizedQuery) return;
                 renderSuggestions(Array.isArray(songs) ? songs.slice(0, 8) : []);
             } catch (error) {
@@ -210,7 +210,7 @@
 
         input.addEventListener("input", () => {
             requestVersion++;
-            const query = input.value.trim().replace(/\\s+/g, " ");
+            const query = input.value.trim().replace(/\s+/g, " ");
             clearTimeout(debounceTimer);
             suggestionSongs = [];
             activeIndex = -1;
@@ -251,7 +251,7 @@
 
         form.addEventListener("submit", event => {
             event.preventDefault();
-            const query = input.value.trim().replace(/\\s+/g, " ");
+            const query = input.value.trim().replace(/\s+/g, " ");
             if (!query) {
                 input.focus();
                 window.showMehfilToast("Enter a song or artist name first.");
