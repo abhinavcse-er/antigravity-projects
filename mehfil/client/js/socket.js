@@ -6,43 +6,59 @@
 const MehfilSocket = (function () {
     "use strict";
 
+    const BACKEND_URL = "https://mehfil-backend-ing6.onrender.com";
+    const VALID_MOODS = new Set(["love", "dard", "sukoon", "safar", "happy", "late-night"]);
+
     let socket = null;
     let currentUser = null;
     let currentMood = "love";
     let isConnected = false;
 
     function init(initialMood = "love") {
-        currentMood = initialMood;
-        if (typeof io === "undefined") {
-            console.warn("[SOCKET] Socket.IO client script not found. Realtime features offline.");
+        currentMood = VALID_MOODS.has(initialMood) ? initialMood : "love";
+
+        if (typeof window.io !== "function") {
+            console.error("[SOCKET] Socket.IO client failed to load. Check the CDN script in index.html.");
             return;
         }
 
-       socket = io("https://mehfil-backend-ing6.onrender.com", {
-    query: { mood: initialMood },
-    transports: ["websocket", "polling"]
-});
+        // Prevent duplicate connections if initialization is triggered again.
+        if (socket) {
+            socket.removeAllListeners();
+            socket.disconnect();
+        }
+
+        socket = window.io(BACKEND_URL, {
+            query: { mood: currentMood },
+            transports: ["websocket", "polling"],
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 10000,
+            timeout: 20000
+        });
 
         socket.on("connect", () => {
             isConnected = true;
-            console.log("[SOCKET] Connected to Mehfil Live Network!");
+            console.log("[SOCKET] Connected to MEHFIL backend:", socket.id);
+        });
+
+        socket.on("connect_error", (error) => {
+            isConnected = false;
+            console.error("[SOCKET] Connection failed:", error.message);
         });
 
         socket.on("presence:welcome", (data) => {
-            currentUser = data.user;
-            console.log("[SOCKET] Welcome identity:", currentUser);
-            updateAudienceUI(data.stats);
+            currentUser = data?.user || null;
+            if (data?.stats) updateAudienceUI(data.stats);
 
-            // Update user badge in chat input if element exists
             const userBadgeEl = document.getElementById("myUserBadge");
-            if (userBadgeEl) {
+            if (userBadgeEl && currentUser) {
                 userBadgeEl.textContent = `${currentUser.avatar} ${currentUser.nickname}`;
             }
         });
 
-        socket.on("presence:update", (stats) => {
-            updateAudienceUI(stats);
-        });
+        socket.on("presence:update", updateAudienceUI);
 
         socket.on("community:message", (msg) => {
             if (typeof window.onCommunityMessageReceived === "function") {
@@ -51,7 +67,7 @@ const MehfilSocket = (function () {
         });
 
         socket.on("community:reaction", (reactionData) => {
-            spawnFloatingReaction(reactionData.reaction);
+            spawnFloatingReaction(reactionData?.reaction || "❤️");
         });
 
         socket.on("request:new", (newReq) => {
@@ -72,23 +88,29 @@ const MehfilSocket = (function () {
             }
         });
 
-        socket.on("disconnect", () => {
+        socket.on("disconnect", (reason) => {
             isConnected = false;
-            console.log("[SOCKET] Disconnected from Mehfil Live Network.");
+            console.warn("[SOCKET] Disconnected from MEHFIL backend:", reason);
         });
     }
 
     function updateAudienceUI(stats) {
-        if (!stats) return;
+        if (!stats || !Number.isFinite(Number(stats.total))) return;
 
-        // Total listeners
-        const formattedTotal = stats.total.toLocaleString();
-        ["headerListeners", "liveListeners", "bottomListeners", "centerListeners", "extraListeners"].forEach(id => {
+        const total = Math.max(0, Math.floor(Number(stats.total)));
+        const formattedTotal = total.toLocaleString();
+
+        ["headerListeners", "liveListeners", "bottomListeners", "centerListeners"].forEach((id) => {
             const el = document.getElementById(id);
             if (el) el.textContent = formattedTotal;
         });
 
-        // Mood breakdown
+        // Seven decorative avatar slots are shown in the panel.
+        const extraEl = document.getElementById("extraListeners");
+        if (extraEl) {
+            extraEl.textContent = `+${Math.max(0, total - 7).toLocaleString()}`;
+        }
+
         if (stats.moods) {
             const moodMap = {
                 loveCount: stats.moods.love,
@@ -101,8 +123,8 @@ const MehfilSocket = (function () {
 
             Object.entries(moodMap).forEach(([id, count]) => {
                 const el = document.getElementById(id);
-                if (el && count !== undefined) {
-                    el.textContent = Number(count).toLocaleString();
+                if (el && Number.isFinite(Number(count))) {
+                    el.textContent = Math.max(0, Number(count)).toLocaleString();
                 }
             });
         }
@@ -115,18 +137,11 @@ const MehfilSocket = (function () {
         const el = document.createElement("div");
         el.className = "floating-reaction";
         el.textContent = emoji;
-
-        // Random horizontal position within container
-        const randomX = Math.floor(Math.random() * 80);
-        el.style.left = `${randomX}px`;
-
+        el.style.left = `${Math.floor(Math.random() * 80)}px`;
         container.appendChild(el);
 
-        // Remove element after animation completes
-        setTimeout(() => {
-            if (el.parentNode) {
-                el.parentNode.removeChild(el);
-            }
+        window.setTimeout(() => {
+            if (el.parentNode) el.parentNode.removeChild(el);
         }, 3400);
     }
 
@@ -136,44 +151,30 @@ const MehfilSocket = (function () {
         isConnected: () => isConnected,
 
         setMood: (mood) => {
-            currentMood = mood;
-            if (socket && socket.connected) {
-                socket.emit("mood:change", mood);
-            }
+            currentMood = VALID_MOODS.has(mood) ? mood : "love";
+            if (socket?.connected) socket.emit("mood:change", currentMood);
         },
 
         sendReaction: (type) => {
             spawnFloatingReaction(type);
-            if (socket && socket.connected) {
-                socket.emit("community:reaction", { type });
-            }
+            if (socket?.connected) socket.emit("community:reaction", { type });
         },
 
         sendMessage: (data) => {
-            if (socket && socket.connected) {
-                socket.emit("community:message", data);
-            }
+            if (socket?.connected) socket.emit("community:message", data);
         },
 
         submitRequest: (data) => {
-            if (socket && socket.connected) {
-                socket.emit("request:new", data);
-            }
+            if (socket?.connected) socket.emit("request:new", data);
         },
 
         voteRequest: (id) => {
-            if (socket && socket.connected) {
-                socket.emit("request:vote", id);
-            }
+            if (socket?.connected) socket.emit("request:vote", id);
         },
 
-        syncRadio: () => {
-            return new Promise((resolve) => {
-                if (!socket || !socket.connected) return resolve(null);
-                socket.emit("radio:sync", (state) => {
-                    resolve(state);
-                });
-            });
-        }
+        syncRadio: () => new Promise((resolve) => {
+            if (!socket?.connected) return resolve(null);
+            socket.emit("radio:sync", (state) => resolve(state));
+        })
     };
 })();
