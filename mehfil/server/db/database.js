@@ -7,12 +7,17 @@ let db = null;
 let isNativeSqlite = false;
 let memoryStore = null;
 
-const defaultDbFilePath = path.join(__dirname, 'mehfil.db');
+const isRender = process.env.RENDER === 'true';
+// Render Free has an ephemeral filesystem. Use its writable temp directory by default;
+// data remains available while the instance runs, but is not guaranteed across restarts.
+const defaultDbFilePath = isRender
+  ? path.join(os.tmpdir(), 'mehfil.db')
+  : path.join(__dirname, 'mehfil.db');
 const requestedDbFilePath = process.env.DB_PATH ? path.resolve(process.env.DB_PATH) : defaultDbFilePath;
 let dbFilePath = requestedDbFilePath;
 let jsonBackupPath = process.env.DB_PATH
   ? path.join(path.dirname(dbFilePath), 'mehfil-store.json')
-  : path.join(__dirname, 'mehfil-store.json');
+  : path.join(path.dirname(defaultDbFilePath), 'mehfil-store.json');
 
 if (process.env.DB_PATH) {
   const mountDirectory = path.dirname(requestedDbFilePath);
