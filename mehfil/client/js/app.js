@@ -191,6 +191,8 @@
         input.addEventListener("input", () => {
             const query = input.value.trim();
             clearTimeout(debounceTimer);
+            suggestionSongs = [];
+            activeIndex = -1;
             if (query.length < 2) {
                 requestVersion++;
                 closeSuggestions();
@@ -213,8 +215,16 @@
                 activeIndex = activeIndex <= 0 ? items.length - 1 : activeIndex - 1;
             } else if (event.key === "Enter" && items.length) {
                 event.preventDefault();
-                const selected = activeIndex >= 0 ? suggestionSongs[activeIndex] : suggestionSongs[0];
-                playSelectedSong(selected);
+                if (activeIndex >= 0) {
+                    playSelectedSong(suggestionSongs[activeIndex]);
+                } else {
+                    activeIndex = 0;
+                    items.forEach((item, index) => {
+                        item.classList.toggle("active", index === 0);
+                        item.setAttribute("aria-selected", String(index === 0));
+                    });
+                    items[0].scrollIntoView({ block: "nearest" });
+                }
             } else if (event.key === "Escape") {
                 closeSuggestions();
             } else {
@@ -234,8 +244,17 @@
                 window.showMehfilToast("Enter a song or artist name first.");
                 return;
             }
-            if (suggestionSongs.length) {
-                playSelectedSong(suggestionSongs[activeIndex >= 0 ? activeIndex : 0]);
+            if (activeIndex >= 0 && suggestionSongs[activeIndex]) {
+                playSelectedSong(suggestionSongs[activeIndex]);
+            } else if (suggestionSongs.length) {
+                activeIndex = 0;
+                const first = suggestions.querySelector(".mehfil-suggestion");
+                if (first) {
+                    first.classList.add("active");
+                    first.setAttribute("aria-selected", "true");
+                    first.scrollIntoView({ block: "nearest" });
+                }
+                window.showMehfilToast("Choose a song from the suggestions to play it.");
             } else {
                 searchSuggestions(query);
             }
