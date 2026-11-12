@@ -6709,3 +6709,382 @@ body.mood-changing .background-image {
         animation: none !important;
     }
 }
+
+
+/* =========================================================
+   MEHFIL — NOCTURNE VISUAL POLISH
+   Visual-only layer. Existing markup, IDs, player logic,
+   radio sync, API calls and mobile layout remain untouched.
+   ========================================================= */
+
+:root {
+    --bg: #0e0314;
+    --surface: rgba(20, 10, 30, .72);
+    --surface-strong: rgba(14, 5, 22, .94);
+    --border: rgba(224, 190, 255, .12);
+    --border-light: rgba(235, 210, 255, .2);
+    --shadow: 0 24px 80px rgba(0, 0, 0, .42);
+    --radius: 22px;
+    --transition: .42s cubic-bezier(.2,.75,.25,1);
+}
+
+body {
+    background: #0e0314;
+    letter-spacing: .005em;
+}
+
+.background {
+    background:
+      radial-gradient(ellipse at 50% 8%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 46%),
+      linear-gradient(145deg, #0e0314 0%, #120a20 48%, #08040d 100%);
+}
+
+.background-overlay {
+    background:
+      linear-gradient(115deg, rgba(14,3,20,.86), rgba(14,3,20,.42) 52%, rgba(8,4,13,.82)),
+      radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 58%);
+    transition: background 1s ease;
+}
+
+.header {
+    min-height: 84px;
+    position: relative;
+    z-index: 20;
+    border-bottom: 1px solid rgba(235,210,255,.075);
+}
+
+.brand-icon {
+    border-radius: 16px;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 22%, #1a0c26), rgba(255,255,255,.035));
+    border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: 0 8px 30px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.brand-text h1 {
+    letter-spacing: .16em;
+}
+
+.navigation {
+    padding: 7px;
+    gap: 4px;
+    border: 1px solid rgba(235,210,255,.09);
+    border-radius: 999px;
+    background: rgba(19,10,28,.52);
+    backdrop-filter: blur(18px);
+}
+
+.nav-link {
+    border-radius: 999px;
+    padding: 10px 13px;
+    transition: color .25s ease, background .25s ease, transform .25s ease;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    background: color-mix(in srgb, var(--accent) 17%, transparent);
+    color: #fff;
+}
+
+.nav-link:hover { transform: translateY(-1px); }
+
+.main {
+    gap: 22px;
+    grid-template-columns: 205px minmax(390px, 1fr) 300px;
+    padding-top: 18px;
+}
+
+.mood-sidebar,
+.live-panel,
+.mehfil-quick-search,
+.player-card {
+    border: 1px solid rgba(235,210,255,.105);
+    background: linear-gradient(145deg, rgba(35,20,47,.76), rgba(13,7,20,.78));
+    box-shadow: 0 18px 55px rgba(0,0,0,.28), inset 0 1px rgba(255,255,255,.035);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+}
+
+.mood-sidebar {
+    padding: 17px 13px;
+    border-radius: 22px;
+}
+
+.sidebar-title {
+    color: rgba(239,220,255,.62);
+    font-size: 9px;
+    letter-spacing: .19em;
+    padding: 7px 10px 15px;
+}
+
+.mood-button {
+    min-height: 48px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: rgba(255,255,255,.025);
+    transition: background .28s ease, border-color .28s ease, transform .28s ease;
+}
+
+.mood-button:hover {
+    background: rgba(255,255,255,.065);
+    border-color: rgba(255,255,255,.09);
+    transform: translateX(3px);
+}
+
+.mood-button.active {
+    color: #fff;
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    background: linear-gradient(100deg, color-mix(in srgb, var(--accent) 23%, transparent), rgba(255,255,255,.035));
+    box-shadow: inset 3px 0 var(--accent), 0 8px 24px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.mood-icon {
+    box-shadow: 0 5px 18px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.surprise-button {
+    width: 100%;
+    margin-top: 12px;
+    border: 1px solid color-mix(in srgb, var(--accent) 27%, transparent);
+    border-radius: 15px;
+    background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 15%, transparent), rgba(255,255,255,.035));
+    transition: transform .25s ease, border-color .25s ease;
+}
+.surprise-button:hover { transform: translateY(-2px); border-color: var(--accent); }
+
+.center-content {
+    justify-content: center;
+    padding: 20px 0 26px;
+}
+
+.mehfil-quick-search {
+    max-width: 680px;
+    min-height: 54px;
+    border-radius: 16px;
+    padding: 7px 9px 7px 17px;
+    margin-bottom: 30px;
+}
+.mehfil-quick-search:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent), 0 15px 45px rgba(0,0,0,.25);
+}
+.mehfil-quick-search input { color: #fff; }
+.mehfil-quick-search button {
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 7px 20px color-mix(in srgb, var(--accent) 23%, transparent);
+}
+
+.mood-intro {
+    padding: 0 8px 4px;
+}
+.you-are {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--accent);
+    letter-spacing: .24em;
+    font-size: 10px;
+}
+.you-are::before {
+    content: "";
+    width: 22px;
+    height: 1px;
+    background: currentColor;
+    opacity: .8;
+}
+.mood-intro h2 {
+    font-size: clamp(64px, 7.5vw, 112px);
+    letter-spacing: -.065em;
+    line-height: .98;
+    background: linear-gradient(110deg, #fff 12%, color-mix(in srgb, var(--accent) 55%, #fff) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    transition: filter .5s ease;
+}
+.mood-intro p {
+    color: rgba(241,228,250,.76);
+    font-size: 18px;
+    margin-top: 13px;
+}
+.mood-action {
+    margin-top: 14px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--accent) 36%, transparent);
+    background: color-mix(in srgb, var(--accent) 11%, transparent);
+    padding: 9px 15px;
+    transition: background .25s ease, transform .25s ease;
+}
+.mood-action:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); transform: translateX(3px); }
+
+.audio-wave {
+    opacity: .72;
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 42%, transparent));
+}
+
+.player-card {
+    max-width: 760px;
+    grid-template-columns: minmax(190px,  .88fr) minmax(0, 1.12fr);
+    gap: 22px;
+    padding: 17px;
+    border-radius: 24px;
+    background:
+      linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, rgba(35,20,47,.9)), rgba(12,7,19,.9));
+}
+.player-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+    box-shadow: 0 25px 75px rgba(0,0,0,.38), 0 0 35px color-mix(in srgb, var(--accent) 8%, transparent);
+    transform: translateY(-3px);
+}
+
+.album-cover {
+    border-radius: 19px;
+    box-shadow: 0 18px 42px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.12);
+}
+.cover-inner {
+    background: linear-gradient(145deg, rgba(255,255,255,.12), transparent 48%, rgba(0,0,0,.28));
+}
+.cover-icon {
+    filter: drop-shadow(0 5px 20px color-mix(in srgb, var(--accent) 55%, transparent));
+}
+.track-section h3 {
+    font-size: clamp(21px, 2vw, 27px);
+    letter-spacing: -.035em;
+}
+.track-section > p { color: rgba(235,220,245,.62); }
+.track-meta { color: var(--accent); }
+.favorite-button {
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255,255,255,.045);
+}
+.favorite-button:hover,
+.favorite-button.active {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 13%, transparent);
+    border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+}
+.progress-bar {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.12);
+    cursor: pointer;
+}
+.progress-fill {
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.player-controls { gap: 12px; }
+.player-controls button {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.075);
+    transition: transform .22s ease, color .22s ease, background .22s ease;
+}
+.player-controls button:hover { color: var(--accent); transform: translateY(-2px); }
+.player-controls .play-button {
+    width: 54px;
+    height: 54px;
+    color: #160b1d;
+    border: 0;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 8px 26px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.player-controls .play-button:hover { color: #160b1d; transform: scale(1.06); }
+
+.live-message {
+    color: rgba(237,222,247,.65);
+    font-size: 12px;
+    margin-top: 17px;
+}
+.live-panel {
+    border-radius: 22px;
+    padding: 20px;
+}
+.panel-heading {
+    color: rgba(244,226,255,.8);
+    letter-spacing: .16em;
+    font-size: 10px;
+}
+.big-listener-count strong {
+    color: var(--accent);
+    text-shadow: 0 0 28px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.panel-divider { background: rgba(235,210,255,.1); }
+.live-panel h4,
+.recent-header h4 {
+    color: rgba(242,226,255,.72);
+    letter-spacing: .14em;
+    font-size: 10px;
+}
+.mood-stat {
+    border-radius: 9px;
+    transition: background .2s ease;
+}
+.mood-stat:hover { background: rgba(255,255,255,.035); }
+.recent-song {
+    border-radius: 12px;
+    transition: background .2s ease, transform .2s ease;
+}
+.recent-song:hover { background: rgba(255,255,255,.06); transform: translateX(3px); }
+
+.bottom-player {
+    border: 1px solid rgba(235,210,255,.15);
+    border-radius: 20px;
+    background: rgba(17,8,25,.88);
+    box-shadow: 0 16px 55px rgba(0,0,0,.5), 0 0 28px color-mix(in srgb, var(--accent) 7%, transparent);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+}
+.bottom-play {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #160b1d;
+    box-shadow: 0 5px 18px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.bottom-cover { border-radius: 10px; }
+
+.mehfil-modal {
+    border-color: rgba(235,210,255,.14);
+    background: rgba(17,8,25,.97);
+    box-shadow: 0 30px 100px rgba(0,0,0,.65), 0 0 45px color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.mehfil-toast {
+    border-color: color-mix(in srgb, var(--accent) 32%, transparent);
+    background: rgba(18,8,27,.96);
+    backdrop-filter: blur(18px);
+}
+
+/* Mood colours gently tint the entire experience, not only the background. */
+body.mood-love { --accent: #ef668f; --accent-2: #bd5bd4; }
+body.mood-dard { --accent: #8d7aff; --accent-2: #536fd5; }
+body.mood-sukoon { --accent: #d7bd83; --accent-2: #76b99b; }
+body.mood-safar { --accent: #42b9d8; --accent-2: #e1a35d; }
+body.mood-happy { --accent: #ffb449; --accent-2: #f16f8d; }
+body.mood-late-night { --accent: #a58aff; --accent-2: #5869cf; }
+
+@media (max-width: 1300px) {
+    .main { grid-template-columns: 190px minmax(0,1fr) 280px; gap: 17px; }
+}
+@media (max-width: 1050px) {
+    .main { grid-template-columns: 180px minmax(0,1fr); }
+    .right-sidebar { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+    .main { display: flex; flex-direction: column; }
+    .mood-sidebar, .live-panel, .player-card, .mehfil-quick-search { border-radius: 19px; }
+    .center-content { padding: 10px 0 18px; }
+}
+@media (max-width: 760px) {
+    .player-card { grid-template-columns: minmax(0,1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .mood-button, .player-card, .nav-link, .surprise-button,
+    .mood-action, .recent-song, .player-controls button {
+        transition: none !important;
+    }
+}
