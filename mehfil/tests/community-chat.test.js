@@ -64,7 +64,7 @@ test("community likes are persisted and broadcast to every connected listener", 
     const app = read("client/js/app.js");
 
     assert.ok(routes.includes("db.likeCommunityMessage(req.params.id)"));
-    assert.ok(routes.includes("io.emit('community:like', updated)"));
+    assert.ok(routes.includes("req.app.get('io').emit('community:like', updated)"));
     assert.ok(sockets.includes('socket.on("community:like"'));
     assert.ok(app.includes("window.onCommunityLikeReceived = function"));
     assert.ok(app.includes("updateCommunityLikeCount(updated)"));
