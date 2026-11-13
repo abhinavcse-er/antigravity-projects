@@ -7506,3 +7506,37 @@ body.mood-late-night { --accent: #a58aff; --accent-2: #5869cf; }
     .library-detail-actions button { flex: 1; }
     .library-create-form button { white-space: nowrap; }
 }
+
+
+/* =========================================================
+   PWA INSTALL ACTION — additive styles
+========================================================= */
+.mobile-menu .pwa-install-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 12px 22px;
+    border: 1px solid rgba(243, 107, 156, .38);
+    border-radius: 14px;
+    color: #ffe5f0;
+    background: linear-gradient(135deg, rgba(243, 107, 156, .16), rgba(166, 91, 213, .16));
+    box-shadow: 0 8px 28px rgba(166, 91, 213, .12);
+    font-family: "DM Sans", sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.mobile-menu .pwa-install-button i {
+    color: var(--accent);
+    font-size: 16px;
+}
+.mobile-menu .pwa-install-button:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+.mobile-menu .pwa-install-button[hidden] {
+    display: none !important;
+}

@@ -1,0 +1,29 @@
+{
+  "id": "/",
+  "name": "MEHFIL — Indian Mood Radio",
+  "short_name": "MEHFIL",
+  "description": "Your Indian mood radio lounge for songs, synchronized listening and community.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#140920",
+  "theme_color": "#17121c",
+  "orientation": "any",
+  "categories": ["music", "entertainment"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
