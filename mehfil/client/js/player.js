@@ -144,7 +144,11 @@ const MehfilAudioPlayer = (function () {
             isPlaying = false;
             stopProgressLoop();
             updatePlayPauseUI(false);
-            if (typeof window.onSongEnded === "function") window.onSongEnded();
+            if (typeof window.onSongUnavailable === "function") {
+                window.onSongUnavailable(failedSong, [failedSong?.youtubeId, failedSong?.backupId].filter(Boolean));
+            } else if (typeof window.onSongEnded === "function") {
+                window.onSongEnded();
+            }
         }, 500);
     }
 
