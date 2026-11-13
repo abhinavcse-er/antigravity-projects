@@ -255,6 +255,134 @@ router.post('/community/:id/like', writeLimiter, (req, res) => {
   res.json(updated);
 });
 
+// Personal music library — every playlist is scoped to the requesting client ID.
+function playlistUserId(req, res) {
+  const userId = String(req.headers['x-user-id'] || '').trim();
+  if (!validClientId(userId)) {
+    res.status(400).json({ error: 'A valid client ID is required' });
+    return null;
+  }
+  return userId;
+}
+
+function validPlaylistId(value) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+router.get('/playlists', (req, res) => {
+  const userId = playlistUserId(req, res);
+  if (!userId) return;
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json(db.getPlaylists(userId));
+});
+
+router.post('/playlists', writeLimiter, (req, res) => {
+  const userId = playlistUserId(req, res);
+  if (!userId) return;
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim().replace(/\s+/g, ' ') : '';
+  if (!name || name.length > 50) {
+    return res.status(400).json({ error: 'Playlist name must be between 1 and 50 characters' });
+  }
+  const playlists = db.getPlaylists(userId);
+  if (playlists.length >= 30) return res.status(409).json({ error: 'You can create up to 30 playlists' });
+  if (playlists.some(item => item.name.toLowerCase() === name.toLowerCase())) {
+    return res.status(409).json({ error: 'A playlist with this name already exists' });
+  }
+  try {
+    const playlist = db.createPlaylist(userId, name);
+    if (!playlist) return res.status(409).json({ error: 'Playlist name is already in use' });
+    res.status(201).json(playlist);
+  } catch (error) {
+    if (/UNIQUE constraint failed/i.test(error.message || '')) {
+      return res.status(409).json({ error: 'A playlist with this name already exists' });
+    }
+    console.error('[PLAYLISTS] Create failed:', error);
+    res.status(500).json({ error: 'Could not create playlist' });
+  }
+});
+
+router.get('/playlists/:id', (req, res) => {
+  const userId = playlistUserId(req, res);
+  if (!userId) return;
+  const playlistId = validPlaylistId(req.params.id);
+  if (!playlistId) return res.status(400).json({ error: 'Invalid playlist ID' });
+  const playlist = db.getPlaylist(userId, playlistId);
+  if (!playlist) return res.status(404).json({ error: 'Playlist not found' });
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json(playlist);
+});
+
+router.patch('/playlists/:id', writeLimiter, (req, res) => {
+  const userId = playlistUserId(req, res);
+  if (!userId) return;
+  const playlistId = validPlaylistId(req.params.id);
+  if (!playlistId) return res.status(400).json({ error: 'Invalid playlist ID' });
+  const name = typeof req.body?.name === 'string' ? req.body.name.trim().replace(/\s+/g, ' ') : '';
+  if (!name || name.length > 50) {
+    return res.status(400).json({ error: 'Playlist name must be between 1 and 50 characters' });
+  }
+  if (db.getPlaylists(userId).some(item =>
+    item.id !== playlistId && item.name.toLowerCase() === name.toLowerCase()
+  )) return res.status(409).json({ error: 'A playlist with this name already exists' });
+  try {
+    const playlist = db.renamePlaylist(userId, playlistId, name);
+    if (!playlist) {
+      const exists = db.getPlaylist(userId, playlistId);
+      return res.status(exists ? 409 : 404).json({
+        error: exists ? 'A playlist with this name already exists' : 'Playlist not found'
+      });
+    }
+    res.json(playlist);
+  } catch (error) {
+    if (/UNIQUE constraint failed/i.test(error.message || '')) {
+      return res.status(409).json({ error: 'A playlist with this name already exists' });
+    }
+    console.error('[PLAYLISTS] Rename failed:', error);
+    res.status(500).json({ error: 'Could not rename playlist' });
+  }
+});
+
+router.delete('/playlists/:id', writeLimiter, (req, res) => {
+  const userId = playlistUserId(req, res);
+  if (!userId) return;
+  const playlistId = validPlaylistId(req.params.id);
+  if (!playlistId) return res.status(400).json({ error: 'Invalid playlist ID' });
+  if (!db.deletePlaylist(userId, playlistId)) {
+    return res.status(404).json({ error: 'Playlist not found' });
+  }
+  res.json({ success: true });
+});
+
+router.post('/playlists/:id/songs', writeLimiter, (req, res) => {
+  const userId = playlistUserId(req, res);
+  if (!userId) return;
+  const playlistId = validPlaylistId(req.params.id);
+  const songId = validPlaylistId(req.body?.songId);
+  if (!playlistId || !songId) {
+    return res.status(400).json({ error: 'Valid playlist and song IDs are required' });
+  }
+  if (!db.getPlaylist(userId, playlistId)) return res.status(404).json({ error: 'Playlist not found' });
+  if (!db.getSongById(songId)) return res.status(404).json({ error: 'Song not found in the MEHFIL library' });
+  const result = db.addSongToPlaylist(userId, playlistId, songId);
+  if (!result) return res.status(404).json({ error: 'Playlist or song not found' });
+  res.status(result.added ? 201 : 200).json({ success: true, added: result.added });
+});
+
+router.delete('/playlists/:id/songs/:songId', writeLimiter, (req, res) => {
+  const userId = playlistUserId(req, res);
+  if (!userId) return;
+  const playlistId = validPlaylistId(req.params.id);
+  const songId = validPlaylistId(req.params.songId);
+  if (!playlistId || !songId) {
+    return res.status(400).json({ error: 'Valid playlist and song IDs are required' });
+  }
+  if (!db.removeSongFromPlaylist(userId, playlistId, songId)) {
+    return res.status(404).json({ error: 'Playlist song not found' });
+  }
+  res.json({ success: true });
+});
+
 // GET /api/favorites
 router.get('/favorites', (req, res) => {
   const userId = String(req.headers['x-user-id'] || '');
