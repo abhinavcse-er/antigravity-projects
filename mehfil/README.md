@@ -116,3 +116,14 @@ The application will start on **http://localhost:3000**.
 - **Persistent storage (optional, may cost extra):** Attach a Render Persistent Disk mounted at `/var/data`, then set `DB_PATH=/var/data/mehfil.db`. Do this only if you intentionally choose a paid disk/service arrangement and have checked the current Render pricing.
 
 The default free setup is single-instance. Live presence is held in process memory, so this setup is not a guarantee of 1,000 concurrent listeners. Validate capacity with staged load tests before advertising that target.
+
+
+## Quality checks
+
+Run the built-in smoke suite from the `mehfil/` directory:
+
+```bash
+npm test
+```
+
+The tests validate the PWA manifest and icon dimensions, service-worker app-shell paths and live-endpoint bypasses, desktop/mobile install controls, local HTML references, JavaScript syntax, and accessible toast announcements. GitHub Actions runs the same suite when files under `mehfil/` change.
