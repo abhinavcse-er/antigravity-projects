@@ -16,7 +16,7 @@
         isShuffle: false,
         isRepeat: false,
         recentSongs: (() => { try { const saved = JSON.parse(localStorage.getItem('mehfil_recent_songs') || '[]'); return Array.isArray(saved) ? saved.slice(0, 6) : []; } catch { return []; } })(),
-
+        unavailableVideoIds: (() => { try { const saved = JSON.parse(localStorage.getItem('mehfil_unavailable_video_ids') || '[]'); return new Set(Array.isArray(saved) ? saved : []); } catch { return new Set(); } })(),
         favoriteSongIds: new Set(),
         moodData: {
             love: { title: "LOVE", quote: "“Pyaar ke gaane, dil se dil tak.”", action: "WHY LOVE?" },
@@ -306,8 +306,12 @@
         try {
             const songs = await MehfilAPI.getSongs({ mood });
             if (requestVersion !== moodLoadVersion || state.currentMood !== mood) return;
-            if (songs && songs.length) {
-                state.songs = songs;
+            const playableCandidates = (Array.isArray(songs) ? songs : []).filter(song => {
+                const ids = [song.youtubeId, song.backupId].filter(Boolean);
+                return ids.length && ids.some(id => !state.unavailableVideoIds.has(String(id)));
+            });
+            if (playableCandidates.length) {
+                state.songs = playableCandidates;
                 state.currentIndex = 0;
                 playSongAtIndex(0, autoPlay);
             }
@@ -556,6 +560,39 @@
         else if (vol < 40) icon.classList.add("fa-volume-low");
         else icon.classList.add("fa-volume-high");
     }
+
+    // Remove a track only after both its primary and backup YouTube
+    // sources have failed. Remember rejected IDs so future mood loads hide it.
+    window.onSongUnavailable = function (song, videoIds = []) {
+        videoIds.forEach(id => state.unavailableVideoIds.add(String(id)));
+        try {
+            localStorage.setItem("mehfil_unavailable_video_ids", JSON.stringify([...state.unavailableVideoIds]));
+        } catch (error) {
+            console.warn("[MEHFIL] Could not persist unavailable video IDs:", error);
+        }
+
+        const failedIndex = state.songs.findIndex(item => String(item.id) === String(song?.id));
+        if (failedIndex >= 0) {
+            state.songs.splice(failedIndex, 1);
+            if (failedIndex < state.currentIndex) state.currentIndex--;
+            if (state.currentIndex >= state.songs.length) state.currentIndex = 0;
+        }
+        state.recentSongs = state.recentSongs.filter(item => String(item.id) !== String(song?.id));
+        try {
+            localStorage.setItem("mehfil_recent_songs", JSON.stringify(state.recentSongs));
+        } catch (error) {
+            console.warn("[MEHFIL] Could not update recently played storage:", error);
+        }
+        renderRecentList();
+
+        window.showMehfilToast("Skipping unavailable track: " + (song?.title || "Unknown song"));
+        if (state.songs.length) {
+            playSongAtIndex(state.currentIndex, true);
+        } else {
+            state.currentSong = null;
+            window.showMehfilToast("No playable songs left in this mood. Try another mood or Search.");
+        }
+    };
 
     // Auto next track when song finishes
     window.onSongEnded = function () {
