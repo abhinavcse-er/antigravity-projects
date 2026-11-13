@@ -7348,3 +7348,161 @@ body.mood-late-night { --accent: #a58aff; --accent-2: #5869cf; }
         height: 40px;
     }
 }
+
+
+/* =========================================================
+   MY MUSIC LIBRARY — additive styles
+   ========================================================= */
+.library-modal-body { display: flex; flex-direction: column; gap: 24px; }
+.library-section + .library-section {
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+}
+.library-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.library-section-heading h3 {
+    margin: 0;
+    color: var(--text);
+    font-size: .98rem;
+}
+.library-section-heading h3 i { color: var(--accent); margin-right: 7px; }
+.library-section-heading > span,
+.library-detail-title > span,
+.library-detail-subheading {
+    color: var(--muted);
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+}
+.library-create-form,
+.library-song-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(255,255,255,.035);
+}
+.library-create-form input,
+.library-song-search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    color: var(--text);
+    background: transparent;
+    font: inherit;
+    padding: 7px 9px;
+}
+.library-create-form input::placeholder,
+.library-song-search input::placeholder { color: var(--muted); }
+.library-create-form button,
+.library-song-picker-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    border-radius: 9px;
+    padding: 9px 13px;
+    color: #fff;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+.library-create-form button:hover,
+.library-song-picker-add:hover { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.library-playlists { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.library-playlist-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: rgba(255,255,255,.035);
+}
+.library-playlist-card-copy { min-width: 0; }
+.library-playlist-card-name {
+    display: block;
+    overflow: hidden;
+    color: var(--text);
+    font-size: .86rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.library-playlist-card-meta { display: block; margin-top: 4px; color: var(--muted); font-size: .7rem; }
+.library-playlist-card button,
+.library-detail-actions button,
+.playlist-remove-btn {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text);
+    background: rgba(255,255,255,.04);
+    cursor: pointer;
+}
+.library-playlist-card button:hover,
+.library-detail-actions button:hover,
+.playlist-remove-btn:hover { border-color: var(--accent); color: var(--accent); }
+.library-empty { padding: 15px; color: var(--muted); text-align: center; font-size: .82rem; }
+.library-playlist-detail {
+    margin-top: 16px;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(0,0,0,.13);
+}
+.library-detail-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+.library-detail-title { min-width: 0; }
+.library-detail-title h3 { margin: 3px 0 0; color: var(--text); font-size: 1.05rem; overflow-wrap: anywhere; }
+.library-detail-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.library-song-search { margin-bottom: 8px; }
+.library-song-search > i { padding-left: 8px; color: var(--muted); }
+.library-song-picker {
+    max-height: 230px;
+    overflow: auto;
+    margin-bottom: 15px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+.library-song-picker-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 11px; }
+.library-song-picker-row + .library-song-picker-row { border-top: 1px solid var(--border); }
+.library-song-picker-info { min-width: 0; }
+.library-song-picker-info strong { display: block; overflow: hidden; color: var(--text); font-size: .8rem; text-overflow: ellipsis; white-space: nowrap; }
+.library-song-picker-info small { display: block; margin-top: 3px; color: var(--muted); font-size: .7rem; }
+.library-song-picker-add { flex: 0 0 auto; padding: 7px 10px; font-size: .72rem; }
+.library-detail-subheading { margin: 15px 0 8px; }
+.library-playlist-detail .song-item-row { border-bottom: 1px solid var(--border); }
+.library-playlist-detail .playlist-remove-btn { color: var(--muted); }
+.library-playlist-detail .songs-grid-list:empty::after {
+    content: "No songs in this playlist yet. Search above to add tracks.";
+    display: block;
+    padding: 14px 4px;
+    color: var(--muted);
+    font-size: .8rem;
+    text-align: center;
+}
+.library-recent-empty { color: var(--muted); font-size: .8rem; padding: 10px 0; }
+@media (max-width: 560px) {
+    .library-playlists { grid-template-columns: 1fr; }
+    .library-detail-heading { align-items: flex-start; flex-direction: column; }
+    .library-detail-actions { width: 100%; }
+    .library-detail-actions button { flex: 1; }
+    .library-create-form button { white-space: nowrap; }
+}
