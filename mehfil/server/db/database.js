@@ -210,7 +210,9 @@ function setupJsonStore() {
       community_messages: seedCommunityMessages.map((m, idx) => ({ ...m, id: idx + 1 })),
       requests: seedRequests.map((r, idx) => ({ ...r, id: idx + 1 })),
       favorites: [],
-      listening_history: []
+      listening_history: [],
+      playlists: [],
+      playlist_songs: []
     };
     persistJsonStore();
   } else {
