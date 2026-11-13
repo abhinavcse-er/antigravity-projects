@@ -134,7 +134,7 @@
                 </a>
                 <a href="#favorites" class="nav-link">
                     <i class="fa-regular fa-heart"></i>
-                    <span>Favorites</span>
+                    <span>My Library</span>
                 </a>
                 <a href="#about" class="nav-link">
                     <i class="fa-solid fa-circle-info"></i>
@@ -633,11 +633,58 @@
     <div class="mehfil-modal-overlay" id="favoritesModal">
         <div class="mehfil-modal">
             <div class="modal-header">
-                <h2><i class="fa-solid fa-heart" style="color:var(--accent);"></i> Liked Songs</h2>
+                <h2><i class="fa-solid fa-bookmark" style="color:var(--accent);"></i> My Music Library</h2>
                 <button class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="modal-body">
-                <div class="songs-grid-list" id="favoritesList"></div>
+            <div class="modal-body library-modal-body">
+                <section class="library-section" aria-labelledby="libraryPlaylistsTitle">
+                    <div class="library-section-heading">
+                        <h3 id="libraryPlaylistsTitle"><i class="fa-solid fa-list-music"></i> Your Playlists</h3>
+                        <span id="playlistCount">0 PLAYLISTS</span>
+                    </div>
+                    <form id="createPlaylistForm" class="library-create-form">
+                        <input id="playlistNameInput" name="playlistName" type="text" maxlength="50" placeholder="Create a playlist..." aria-label="New playlist name" required>
+                        <button type="submit"><i class="fa-solid fa-plus"></i> Create</button>
+                    </form>
+                    <div id="playlistsList" class="library-playlists" aria-live="polite">
+                        <p class="library-empty">Your personal playlists will appear here.</p>
+                    </div>
+                    <div id="playlistDetail" class="library-playlist-detail" hidden>
+                        <div class="library-detail-heading">
+                            <div class="library-detail-title">
+                                <span>YOUR PLAYLIST</span>
+                                <h3 id="playlistDetailTitle">Playlist</h3>
+                            </div>
+                            <div class="library-detail-actions">
+                                <button id="playPlaylistButton" type="button" title="Play playlist"><i class="fa-solid fa-play"></i></button>
+                                <button id="renamePlaylistButton" type="button" title="Rename playlist"><i class="fa-solid fa-pen"></i></button>
+                                <button id="deletePlaylistButton" type="button" title="Delete playlist"><i class="fa-solid fa-trash"></i></button>
+                                <button id="closePlaylistDetailButton" type="button" title="Close playlist"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        </div>
+                        <form id="addPlaylistSongForm" class="library-song-search">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                            <input id="playlistSongSearchInput" type="search" placeholder="Find songs in MEHFIL library..." aria-label="Find songs to add">
+                        </form>
+                        <div id="playlistSongSearchResults" class="library-song-picker" hidden></div>
+                        <div class="library-detail-subheading">IN THIS PLAYLIST</div>
+                        <div id="playlistSongsList" class="songs-grid-list"></div>
+                    </div>
+                </section>
+                <section class="library-section" aria-labelledby="libraryRecentTitle">
+                    <div class="library-section-heading">
+                        <h3 id="libraryRecentTitle"><i class="fa-solid fa-clock-rotate-left"></i> Recently Played</h3>
+                        <span>YOUR LAST TRACKS</span>
+                    </div>
+                    <div id="libraryRecentList" class="songs-grid-list"></div>
+                </section>
+                <section class="library-section" aria-labelledby="libraryFavoritesTitle">
+                    <div class="library-section-heading">
+                        <h3 id="libraryFavoritesTitle"><i class="fa-solid fa-heart"></i> Liked Songs</h3>
+                        <span>YOUR FAVOURITES</span>
+                    </div>
+                    <div class="songs-grid-list" id="favoritesList"></div>
+                </section>
             </div>
         </div>
     </div>
@@ -690,7 +737,7 @@
         <a href="#explore"><i class="fa-solid fa-compass"></i> Explore</a>
         <a href="#requests"><i class="fa-regular fa-message"></i> Requests</a>
         <a href="#community"><i class="fa-solid fa-users"></i> Community</a>
-        <a href="#favorites"><i class="fa-regular fa-heart"></i> Favorites</a>
+        <a href="#favorites"><i class="fa-regular fa-heart"></i> My Library</a>
         <a href="#about"><i class="fa-solid fa-circle-info"></i> About</a>
     </div>
 
