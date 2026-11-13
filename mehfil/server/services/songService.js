@@ -105,8 +105,87 @@ class SongService {
     return db.getRandomSong(mood);
   }
 
-  recordPlay(id) {
-    db.incrementPlays(id);
+  recordPlay(id, userId, mood) {
+    const numericId = Number(id);
+    if (Number.isInteger(numericId) && numericId > 0) {
+      db.incrementPlays(numericId);
+    }
+    const selectedMood = Object.prototype.hasOwnProperty.call(config.moods, mood)
+      ? mood
+      : (db.getSongById(id)?.mood || 'love');
+    if (userId) db.recordListening(userId, id, selectedMood);
+  }
+
+  getPersonalizedSongs(userId, preferredMood = 'love', limit = 20) {
+    const safeLimit = Math.max(1, Math.min(30, Math.floor(Number(limit) || 20)));
+    const mood = Object.prototype.hasOwnProperty.call(config.moods, preferredMood)
+      ? preferredMood
+      : 'love';
+    const catalog = db.getSongs({ limit: 300 });
+    if (!catalog.length) return [];
+
+    const history = db.getListeningHistory(userId, 120);
+    const favorites = db.getFavorites(userId);
+    const favoriteIds = new Set(favorites.map(song => Number(song.id)));
+    const moodAffinity = new Map();
+    const trackAffinity = new Map();
+    const recentIds = new Set();
+    const artistAffinity = new Map();
+    const catalogById = new Map(catalog.map(song => [Number(song.id), song]));
+
+    history.forEach((entry, index) => {
+      const recencyWeight = Math.max(0.2, 3.5 * Math.exp(-index / 28));
+      if (entry.mood) {
+        moodAffinity.set(entry.mood, (moodAffinity.get(entry.mood) || 0) + recencyWeight);
+      }
+      if (entry.songId) {
+        const id = Number(entry.songId);
+        trackAffinity.set(id, (trackAffinity.get(id) || 0) + recencyWeight);
+        if (index < 8) recentIds.add(id);
+        const playedSong = catalogById.get(id);
+        if (playedSong?.artist) {
+          artistAffinity.set(playedSong.artist, (artistAffinity.get(playedSong.artist) || 0) + recencyWeight);
+        }
+      }
+    });
+
+    const ranked = catalog.map(song => {
+      const id = Number(song.id);
+      let score = Math.log1p(Math.max(0, Number(song.plays) || 0)) * 1.4;
+      if (song.mood === mood) score += 22;
+      score += Math.min(6, moodAffinity.get(song.mood) || 0) * 5;
+      score += Math.min(5, trackAffinity.get(id) || 0) * 2.5;
+      score += Math.min(5, artistAffinity.get(song.artist) || 0) * 2.2;
+      if (favoriteIds.has(id)) score += 32;
+      if (recentIds.has(id)) score -= 34;
+      return { song, score };
+    }).sort((a, b) => b.score - a.score);
+
+    // Greedy diversity pass: keep the radio personal, but avoid a queue
+    // dominated by a single singer or mood.
+    const selected = [];
+    const artistCounts = new Map();
+    const moodCounts = new Map();
+    const remaining = [...ranked];
+    while (selected.length < safeLimit && remaining.length) {
+      let bestIndex = 0;
+      let bestScore = -Infinity;
+      for (let index = 0; index < remaining.length; index++) {
+        const candidate = remaining[index];
+        const artistPenalty = (artistCounts.get(candidate.song.artist) || 0) * 8;
+        const moodPenalty = (moodCounts.get(candidate.song.mood) || 0) * 2.5;
+        const adjusted = candidate.score - artistPenalty - moodPenalty;
+        if (adjusted > bestScore) {
+          bestScore = adjusted;
+          bestIndex = index;
+        }
+      }
+      const [chosen] = remaining.splice(bestIndex, 1);
+      selected.push(chosen.song);
+      artistCounts.set(chosen.song.artist, (artistCounts.get(chosen.song.artist) || 0) + 1);
+      moodCounts.set(chosen.song.mood, (moodCounts.get(chosen.song.mood) || 0) + 1);
+    }
+    return selected;
   }
 
   async searchSongs(query, mood) {
