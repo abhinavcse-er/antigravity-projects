@@ -142,6 +142,28 @@ const MehfilAPI = (function () {
         toggleFavorite: (songId) => request("/favorites", {
             method: "POST",
             body: JSON.stringify({ songId })
-        })
+        }),
+
+        getPlaylists: () => request("/playlists"),
+        getPlaylist: (playlistId) => request(`/playlists/${encodeURIComponent(playlistId)}`),
+        createPlaylist: (name) => request("/playlists", {
+            method: "POST",
+            body: JSON.stringify({ name })
+        }),
+        renamePlaylist: (playlistId, name) => request(`/playlists/${encodeURIComponent(playlistId)}`, {
+            method: "PATCH",
+            body: JSON.stringify({ name })
+        }),
+        deletePlaylist: (playlistId) => request(`/playlists/${encodeURIComponent(playlistId)}`, {
+            method: "DELETE"
+        }),
+        addSongToPlaylist: (playlistId, songId) => request(`/playlists/${encodeURIComponent(playlistId)}/songs`, {
+            method: "POST",
+            body: JSON.stringify({ songId })
+        }),
+        removeSongFromPlaylist: (playlistId, songId) => request(
+            `/playlists/${encodeURIComponent(playlistId)}/songs/${encodeURIComponent(songId)}`,
+            { method: "DELETE" }
+        )
     };
 })();
