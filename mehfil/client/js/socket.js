@@ -110,6 +110,10 @@ const MehfilSocket = (function () {
             const liveBadge = document.querySelector(".header-live");
             if (liveBadge) liveBadge.title = "Live audience connected and syncing";
             sendHeartbeat();
+            if (window.MehfilAPI?.clearCache) window.MehfilAPI.clearCache();
+            if (typeof window.onCommunitySocketReconnected === "function") {
+                window.onCommunitySocketReconnected();
+            }
         });
 
         socket.on("connect_error", (error) => {
@@ -134,6 +138,12 @@ const MehfilSocket = (function () {
         socket.on("community:message", (msg) => {
             if (typeof window.onCommunityMessageReceived === "function") {
                 window.onCommunityMessageReceived(msg);
+            }
+        });
+
+        socket.on("community:like", (msg) => {
+            if (typeof window.onCommunityLikeReceived === "function") {
+                window.onCommunityLikeReceived(msg);
             }
         });
 

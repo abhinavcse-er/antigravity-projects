@@ -650,3 +650,48 @@
     transform: translateX(-50%) translateY(0);
     opacity: 1;
 }
+
+
+/* MEHFIL BAITHAK — shared live chat status and safe message labels */
+.community-live-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(255, 79, 112, .18);
+    border-radius: 12px;
+    color: var(--muted);
+    background: rgba(255, 79, 112, .045);
+    font-size: .78rem;
+}
+.community-live-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: #ff4f70;
+    box-shadow: 0 0 10px rgba(255, 79, 112, .7);
+    animation: livePulse 1.6s ease-in-out infinite;
+}
+.chat-mood-label {
+    color: var(--accent);
+    font-size: .75rem;
+    text-transform: capitalize;
+}
+.chat-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.like-msg-btn:disabled {
+    opacity: .55;
+    cursor: wait;
+}
+.community-empty-state {
+    padding: 16px;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--muted);
+    text-align: center;
+    font-size: .85rem;
+}

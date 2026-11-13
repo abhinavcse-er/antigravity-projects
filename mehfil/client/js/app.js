@@ -38,6 +38,8 @@
     let musicLibraryCatalog = null;
     let playlistSearchTimer = null;
     let playlistSearchVersion = 0;
+    const communityMessages = new Map();
+    const COMMUNITY_MESSAGE_LIMIT = 40;
 
     // Toast Notification
     window.showMehfilToast = function (text) {
@@ -903,29 +905,41 @@
             });
         }
 
-        // Community Send Message Form
+        // Community Send Message Form — API saves first, then Socket.IO broadcasts to everyone.
         const chatForm = $("communityChatForm");
         if (chatForm) {
             chatForm.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 const textInput = $("chatTextInput");
-                const text = textInput.value;
+                const submitButton = chatForm.querySelector(".send-msg-btn");
+                const text = textInput?.value?.trim() || "";
                 const isShayari = $("isShayariCheckbox")?.checked || false;
 
-                if (!text || !text.trim()) return;
+                if (!text || (submitButton && submitButton.disabled)) return;
 
                 const user = MehfilSocket.getCurrentUser();
+                if (submitButton) submitButton.disabled = true;
                 try {
-                    await MehfilAPI.postCommunityMessage({
+                    const savedMessage = await MehfilAPI.postCommunityMessage({
                         userName: user?.nickname || "Musafir",
                         userAvatar: user?.avatar || "🎶",
                         mood: state.currentMood,
-                        text: text.trim(),
+                        text,
                         isShayari
                     });
+
+                    // The socket broadcast may arrive before or after the HTTP response.
+                    // Message IDs make both paths idempotent in the UI.
+                    appendCommunityMessage(savedMessage, true);
                     textInput.value = "";
+                    const shayariCheckbox = $("isShayariCheckbox");
+                    if (shayariCheckbox) shayariCheckbox.checked = false;
                 } catch (err) {
-                    window.showMehfilToast("Message could not be sent.");
+                    console.error("[MEHFIL] Community message failed:", err);
+                    window.showMehfilToast(err.message || "Message could not be sent. Please retry.");
+                } finally {
+                    if (submitButton) submitButton.disabled = false;
+                    if (textInput) textInput.focus();
                 }
             });
         }
@@ -1087,66 +1101,171 @@
         if (btn) btn.textContent = updatedReq.votes;
     };
 
-    /* COMMUNITY CHAT DATA */
+    /* COMMUNITY CHAT DATA — shared database history + idempotent live updates */
     async function loadCommunityMessages() {
         const stream = $("communityMessagesStream");
         if (!stream) return;
         try {
             const messages = await MehfilAPI.getCommunityMessages();
-            stream.innerHTML = "";
-            messages.forEach(msg => appendCommunityMessage(msg, false));
-            stream.scrollTop = stream.scrollHeight;
+            (Array.isArray(messages) ? messages : []).forEach(rememberCommunityMessage);
+            renderCommunityMessages(true);
         } catch (err) {
-            stream.innerHTML = "<div>Unable to connect to community stream.</div>";
+            console.error("[MEHFIL] Could not load community history:", err);
+            if (!communityMessages.size && !stream.childElementCount) {
+                const notice = document.createElement("div");
+                notice.className = "community-empty-state";
+                notice.textContent = "Unable to connect to the community. Please try again.";
+                stream.appendChild(notice);
+            }
         }
     }
 
-    function appendCommunityMessage(msg, scroll = true) {
+    function rememberCommunityMessage(msg) {
+        const id = Number(msg?.id);
+        if (!Number.isSafeInteger(id) || id < 1) return false;
+
+        const key = String(id);
+        const existing = communityMessages.get(key);
+        communityMessages.set(key, existing ? { ...existing, ...msg } : { ...msg });
+
+        if (communityMessages.size > COMMUNITY_MESSAGE_LIMIT * 2) {
+            const oldest = [...communityMessages.values()]
+                .sort((a, b) => Number(a.timestamp) - Number(b.timestamp) || Number(a.id) - Number(b.id))
+                .slice(0, communityMessages.size - COMMUNITY_MESSAGE_LIMIT * 2);
+            oldest.forEach(item => communityMessages.delete(String(item.id)));
+        }
+        return !existing;
+    }
+
+    function renderCommunityMessages(scrollToLatest = false) {
         const stream = $("communityMessagesStream");
         if (!stream) return;
 
-        const bubble = document.createElement("div");
-        bubble.className = `chat-bubble ${msg.isShayari ? 'is-shayari' : ''}`;
-        const timeAgo = formatTimeAgo(msg.timestamp);
+        const wasNearBottom = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 80;
+        const fragment = document.createDocumentFragment();
+        const messages = [...communityMessages.values()]
+            .sort((a, b) => Number(a.timestamp) - Number(b.timestamp) || Number(a.id) - Number(b.id))
+            .slice(-COMMUNITY_MESSAGE_LIMIT);
 
-        bubble.innerHTML = `
-            <div class="chat-bubble-header">
-                <div class="chat-user-badge">
-                    <span>${msg.userAvatar || '🎶'}</span>
-                    <span>${msg.userName}</span>
-                    <span style="font-size:0.75rem; color:var(--accent); text-transform:capitalize;">• ${msg.mood || 'love'}</span>
-                </div>
-                <div class="chat-time">${timeAgo}</div>
-            </div>
-            <div class="chat-text">${msg.text}</div>
-            <div class="chat-actions">
-                <button class="like-msg-btn" data-id="${msg.id}">
-                    <i class="fa-solid fa-heart"></i>
-                    <span>${msg.likes || 0}</span>
-                </button>
-            </div>
-        `;
+        messages.forEach(msg => fragment.appendChild(createCommunityBubble(msg)));
+        stream.replaceChildren(fragment);
 
-        bubble.querySelector(".like-msg-btn").addEventListener("click", async () => {
-            const updated = await MehfilAPI.likeCommunityMessage(msg.id);
-            if (updated) {
-                bubble.querySelector(".like-msg-btn span").textContent = updated.likes;
+        if (scrollToLatest || wasNearBottom) stream.scrollTop = stream.scrollHeight;
+    }
+
+    function createCommunityBubble(msg) {
+        const bubble = document.createElement("article");
+        bubble.className = "chat-bubble" + (msg.isShayari ? " is-shayari" : "");
+        bubble.dataset.id = String(msg.id);
+
+        const header = document.createElement("div");
+        header.className = "chat-bubble-header";
+
+        const userBadge = document.createElement("div");
+        userBadge.className = "chat-user-badge";
+
+        const avatar = document.createElement("span");
+        avatar.textContent = msg.userAvatar || "🎶";
+        const userName = document.createElement("span");
+        userName.textContent = msg.userName || "Musafir";
+
+        const mood = document.createElement("span");
+        mood.className = "chat-mood-label";
+        mood.textContent = "• " + (msg.mood || "love");
+
+        const time = document.createElement("div");
+        time.className = "chat-time";
+        time.textContent = formatTimeAgo(msg.timestamp);
+
+        userBadge.append(avatar, userName, mood);
+        header.append(userBadge, time);
+
+        const messageText = document.createElement("div");
+        messageText.className = "chat-text";
+        messageText.textContent = msg.text || "";
+
+        const actions = document.createElement("div");
+        actions.className = "chat-actions";
+
+        const likeButton = document.createElement("button");
+        likeButton.type = "button";
+        likeButton.className = "like-msg-btn";
+        likeButton.dataset.id = String(msg.id);
+        likeButton.setAttribute("aria-label", "Like message by " + (msg.userName || "Musafir"));
+
+        const heart = document.createElement("i");
+        heart.className = "fa-solid fa-heart";
+        heart.setAttribute("aria-hidden", "true");
+
+        const likeCount = document.createElement("span");
+        likeCount.textContent = String(Math.max(0, Number(msg.likes) || 0));
+        likeButton.append(heart, likeCount);
+        likeButton.addEventListener("click", async () => {
+            if (likeButton.disabled) return;
+            likeButton.disabled = true;
+            try {
+                const updated = await MehfilAPI.likeCommunityMessage(msg.id);
+                if (updated) updateCommunityLikeCount(updated);
+            } catch (error) {
+                console.error("[MEHFIL] Could not like community message:", error);
+                window.showMehfilToast(error.message || "Like could not be saved. Please retry.");
+            } finally {
+                likeButton.disabled = false;
             }
         });
 
-        stream.appendChild(bubble);
-        if (scroll) stream.scrollTop = stream.scrollHeight;
+        actions.appendChild(likeButton);
+        bubble.append(header, messageText, actions);
+        return bubble;
+    }
+
+    function appendCommunityMessage(msg, scroll = true) {
+        if (!msg || msg.id == null) return;
+        const isNew = rememberCommunityMessage(msg);
+        if (isNew) renderCommunityMessages(scroll);
+    }
+
+    function updateCommunityLikeCount(msg) {
+        const id = Number(msg?.id);
+        const likes = Number(msg?.likes);
+        if (!Number.isSafeInteger(id) || id < 1 || !Number.isFinite(likes)) return;
+
+        const key = String(id);
+        const existing = communityMessages.get(key);
+        if (existing) {
+            communityMessages.set(key, { ...existing, likes: Math.max(Number(existing.likes) || 0, likes) });
+        }
+
+        const stream = $("communityMessagesStream");
+        if (!stream) return;
+        stream.querySelectorAll(".like-msg-btn").forEach(button => {
+            if (Number(button.dataset.id) === id) {
+                const count = button.querySelector("span");
+                if (count) count.textContent = String(Math.max(Number(count.textContent) || 0, likes));
+            }
+        });
     }
 
     window.onCommunityMessageReceived = function (msg) {
         appendCommunityMessage(msg, true);
     };
 
+    window.onCommunityLikeReceived = function (msg) {
+        updateCommunityLikeCount(msg);
+    };
+
+    window.onCommunitySocketReconnected = function () {
+        const modal = $("communityModal");
+        if (modal?.classList.contains("active")) loadCommunityMessages();
+    };
+
     function formatTimeAgo(ts) {
-        const diff = Math.floor((Date.now() - ts) / 1000);
+        const timestamp = Number(ts);
+        if (!Number.isFinite(timestamp) || timestamp <= 0) return "just now";
+        const diff = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
         if (diff < 60) return "just now";
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        return `${Math.floor(diff / 3600)}h ago`;
+        if (diff < 3600) return String(Math.floor(diff / 60)) + "m ago";
+        return String(Math.floor(diff / 3600)) + "h ago";
     }
 
     /* =====================================================

@@ -23,7 +23,8 @@ const MehfilAPI = (function () {
         if (endpoint.startsWith("/moods")) return 10000;
         if (endpoint.startsWith("/songs")) return 30000;
         if (endpoint.startsWith("/favorites")) return 10000;
-        if (endpoint.startsWith("/community") || endpoint.startsWith("/requests")) return 8000;
+        if (endpoint.startsWith("/community")) return 0; // Realtime chat must always fetch fresh history.
+        if (endpoint.startsWith("/requests")) return 8000;
         return 0;
     }
 
