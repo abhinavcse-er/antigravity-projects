@@ -125,3 +125,12 @@ test("toast notifications expose a polite live status to assistive technology", 
     assert.match(source, /toast\.setAttribute\("aria-live", "polite"\)/);
     assert.match(source, /toast\.setAttribute\("aria-atomic", "true"\)/);
 });
+
+
+test("desktop header keeps the hamburger hidden and uses a compact install action", () => {
+    const source = read("client/css/style.css");
+    assert.match(source, /@media \(min-width: 1241px\)[\s\S]*?\.header \.menu-button\s*\{\s*display: none !important;/);
+    assert.match(source, /\.header \.pwa-header-install\s*\{[\s\S]*?width: 40px;/);
+    assert.match(source, /\.header \.pwa-header-install span\s*\{\s*display: none;/);
+    assert.match(source, /@media \(max-width: 1240px\)/);
+});

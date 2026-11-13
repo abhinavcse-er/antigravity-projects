@@ -7582,3 +7582,78 @@ body.mood-late-night { --accent: #a58aff; --accent-2: #5869cf; }
         transition-duration: 0.01ms !important;
     }
 }
+
+
+
+/* =========================================================
+   HEADER FIT FIX — desktop navigation and install action
+   Keep the hamburger exclusive to tablet/mobile layouts.
+========================================================= */
+@media (min-width: 1241px) {
+    .header {
+        gap: clamp(8px, 1vw, 18px);
+    }
+
+    .header .menu-button {
+        display: none !important;
+    }
+
+    .header .pwa-header-install {
+        display: inline-flex;
+        flex: 0 0 40px;
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        min-height: 40px;
+        padding: 0;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .header .pwa-header-install span {
+        display: none;
+    }
+
+    .header .navigation {
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: none;
+        gap: 2px;
+        padding: 5px;
+    }
+
+    .header .navigation .nav-link {
+        flex: 0 1 auto;
+        min-width: 0;
+        gap: 6px;
+        padding: 9px clamp(7px, .7vw, 12px);
+        font-size: clamp(11px, .72vw, 13px);
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 1241px) and (max-width: 1600px) {
+    .header {
+        gap: 8px;
+    }
+
+    .header .navigation {
+        gap: 0;
+        padding: 4px;
+    }
+
+    .header .navigation .nav-link {
+        gap: 5px;
+        padding-inline: 7px;
+        font-size: 11px;
+    }
+
+    .header .mode-toggle-btn {
+        padding-inline: 12px;
+    }
+
+    .header .header-live {
+        padding-inline: 10px;
+    }
+}
