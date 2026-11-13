@@ -33,6 +33,11 @@
     const $ = (id) => document.getElementById(id);
     let moodLoadVersion = 0;
     let personalRadioRequestVersion = 0;
+    let activePlaylistId = null;
+    let activePlaylist = null;
+    let musicLibraryCatalog = null;
+    let playlistSearchTimer = null;
+    let playlistSearchVersion = 0;
 
     // Toast Notification
     window.showMehfilToast = function (text) {
@@ -813,7 +818,15 @@
         document.querySelectorAll("a[href='#explore']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("exploreModal"); loadExploreSongs(); }));
         document.querySelectorAll("a[href='#requests']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("requestsModal"); loadRequests(); }));
         document.querySelectorAll("a[href='#community']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("communityModal"); loadCommunityMessages(); }));
-        document.querySelectorAll("a[href='#favorites']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("favoritesModal"); loadFavoritesModal(); }));
+        document.querySelectorAll("a[href='#favorites']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("favoritesModal"); loadMusicLibrary(); }));
+        const viewAllRecent = $("viewAllRecent");
+        if (viewAllRecent) {
+            viewAllRecent.addEventListener("click", () => {
+                openModal("favoritesModal");
+                loadMusicLibrary();
+            });
+        }
+        attachPlaylistControls();
         document.querySelectorAll("a[href='#about']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("aboutModal"); }));
 
         // Mood action button (now a <button> not <a>)
@@ -1129,6 +1142,382 @@
         if (diff < 60) return "just now";
         if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
         return `${Math.floor(diff / 3600)}h ago`;
+    }
+
+    /* =====================================================
+       MY MUSIC LIBRARY — PRIVATE PLAYLISTS
+    ===================================================== */
+    async function loadMusicLibrary() {
+        activePlaylistId = null;
+        activePlaylist = null;
+        const detail = $("playlistDetail");
+        if (detail) detail.hidden = true;
+        renderLibraryRecent();
+        await Promise.all([loadPlaylists(), loadFavoritesModal()]);
+    }
+
+    async function loadPlaylists() {
+        const listEl = $("playlistsList");
+        const countEl = $("playlistCount");
+        if (!listEl) return;
+        listEl.innerHTML = '<p class="library-empty">Loading your playlists...</p>';
+
+        try {
+            const playlists = await MehfilAPI.getPlaylists();
+            if (countEl) countEl.textContent = `${playlists.length} PLAYLIST${playlists.length === 1 ? "" : "S"}`;
+            listEl.innerHTML = "";
+            if (!playlists.length) {
+                listEl.innerHTML = '<p class="library-empty">No playlists yet. Create one above to start your collection.</p>';
+                return;
+            }
+
+            playlists.forEach(playlist => {
+                const card = document.createElement("div");
+                card.className = "library-playlist-card";
+
+                const copy = document.createElement("div");
+                copy.className = "library-playlist-card-copy";
+                const name = document.createElement("strong");
+                name.className = "library-playlist-card-name";
+                name.textContent = playlist.name;
+                const meta = document.createElement("small");
+                meta.className = "library-playlist-card-meta";
+                meta.textContent = `${Number(playlist.songCount) || 0} song${Number(playlist.songCount) === 1 ? "" : "s"}`;
+                copy.append(name, meta);
+
+                const open = document.createElement("button");
+                open.type = "button";
+                open.className = "library-playlist-open-btn";
+                open.title = "Open playlist";
+                open.setAttribute("aria-label", `Open ${playlist.name}`);
+                open.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+                open.addEventListener("click", () => openPlaylistDetail(playlist.id));
+
+                card.append(copy, open);
+                listEl.appendChild(card);
+            });
+        } catch (error) {
+            console.error("[MEHFIL] Could not load playlists:", error);
+            listEl.innerHTML = '<p class="library-empty">Your playlists could not be loaded. Please try again.</p>';
+        }
+    }
+
+    async function openPlaylistDetail(playlistId) {
+        const detail = $("playlistDetail");
+        const songsEl = $("playlistSongsList");
+        const titleEl = $("playlistDetailTitle");
+        if (!detail || !songsEl || !titleEl) return;
+
+        songsEl.innerHTML = '<p class="library-empty">Loading playlist...</p>';
+        detail.hidden = false;
+        activePlaylistId = Number(playlistId);
+
+        try {
+            const playlist = await MehfilAPI.getPlaylist(activePlaylistId);
+            if (activePlaylistId !== Number(playlistId)) return;
+            activePlaylist = playlist;
+            titleEl.textContent = playlist.name;
+            renderPlaylistSongs(playlist);
+        } catch (error) {
+            console.error("[MEHFIL] Could not open playlist:", error);
+            songsEl.innerHTML = '<p class="library-empty">Playlist could not be opened. Refresh and try again.</p>';
+        }
+    }
+
+    function renderPlaylistSongs(playlist) {
+        const listEl = $("playlistSongsList");
+        if (!listEl) return;
+        listEl.innerHTML = "";
+
+        (playlist.songs || []).forEach((song, index) => {
+            const row = createLibrarySongRow(song, {
+                playLabel: "Play song",
+                onPlay: () => playPlaylistTrack(playlist.songs, index),
+                extraClass: "playlist-song-row"
+            });
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.className = "playlist-remove-btn";
+            remove.title = "Remove from playlist";
+            remove.setAttribute("aria-label", `Remove ${song.title} from playlist`);
+            remove.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            remove.addEventListener("click", async () => {
+                try {
+                    await MehfilAPI.removeSongFromPlaylist(playlist.id, song.id);
+                    await openPlaylistDetail(playlist.id);
+                    await loadPlaylists();
+                    window.showMehfilToast("Removed from playlist.");
+                } catch (error) {
+                    console.error("[MEHFIL] Could not remove playlist song:", error);
+                    window.showMehfilToast(error.message || "Could not remove this song.");
+                }
+            });
+            row.querySelector(".song-item-actions")?.appendChild(remove);
+            listEl.appendChild(row);
+        });
+    }
+
+    function createLibrarySongRow(song, options = {}) {
+        const row = document.createElement("div");
+        row.className = `song-item-row ${options.extraClass || ""}`;
+
+        const info = document.createElement("div");
+        info.className = "song-item-info";
+        if (song.cover) {
+            const cover = document.createElement("img");
+            cover.className = "song-item-cover";
+            cover.src = song.cover;
+            cover.alt = "";
+            cover.loading = "lazy";
+            cover.decoding = "async";
+            info.appendChild(cover);
+        }
+        const meta = document.createElement("div");
+        meta.className = "song-item-meta";
+        const title = document.createElement("div");
+        title.className = "song-item-title";
+        title.textContent = song.title || "Unknown song";
+        const artist = document.createElement("div");
+        artist.className = "song-item-artist";
+        artist.textContent = song.artist || "Unknown artist";
+        meta.append(title, artist);
+        info.appendChild(meta);
+
+        const actions = document.createElement("div");
+        actions.className = "song-item-actions";
+        const play = document.createElement("button");
+        play.type = "button";
+        play.className = "play-item-btn";
+        play.title = options.playLabel || "Play song";
+        play.setAttribute("aria-label", options.playLabel || `Play ${song.title || "song"}`);
+        play.innerHTML = '<i class="fa-solid fa-play"></i>';
+        play.addEventListener("click", options.onPlay || (() => {
+            closeModal();
+            playSong(song, true);
+        }));
+        actions.appendChild(play);
+        row.append(info, actions);
+        return row;
+    }
+
+    function playPlaylistTrack(playlistSongs, selectedIndex) {
+        const playable = (Array.isArray(playlistSongs) ? playlistSongs : []).filter(song => {
+            const ids = [song.youtubeId, song.backupId].filter(Boolean);
+            return ids.length && ids.some(id => !state.unavailableVideoIds.has(String(id)));
+        });
+        if (!playable.length) {
+            window.showMehfilToast("This playlist has no playable tracks yet.");
+            return;
+        }
+        const selectedSong = playlistSongs[selectedIndex];
+        const startIndex = playable.findIndex(song => String(song.id) === String(selectedSong?.id));
+        if (startIndex < 0) {
+            window.showMehfilToast("This track is currently unavailable.");
+            return;
+        }
+
+        state.isPersonalRadio = false;
+        state.isRadioSyncMode = false;
+        updatePersonalRadioButtonUI();
+        updateRadioBadgeUI();
+        state.songs = playable;
+        state.currentIndex = startIndex;
+        closeModal();
+        playSongAtIndex(startIndex, true);
+    }
+
+    function renderLibraryRecent() {
+        const listEl = $("libraryRecentList");
+        if (!listEl) return;
+        listEl.innerHTML = "";
+        if (!state.recentSongs.length) {
+            listEl.innerHTML = '<p class="library-recent-empty">Songs you play will appear here.</p>';
+            return;
+        }
+        state.recentSongs.forEach(song => {
+            listEl.appendChild(createLibrarySongRow(song, {
+                onPlay: () => {
+                    closeModal();
+                    playSong(song, true);
+                }
+            }));
+        });
+    }
+
+    async function searchPlaylistCatalog(query) {
+        const resultsEl = $("playlistSongSearchResults");
+        if (!resultsEl || !activePlaylistId) return;
+        const searchVersion = ++playlistSearchVersion;
+        const normalized = String(query || "").trim().toLowerCase();
+        if (normalized.length < 2) {
+            resultsEl.hidden = true;
+            resultsEl.innerHTML = "";
+            return;
+        }
+
+        resultsEl.hidden = false;
+        resultsEl.innerHTML = '<p class="library-empty">Searching MEHFIL library...</p>';
+        try {
+            if (!musicLibraryCatalog) {
+                musicLibraryCatalog = await MehfilAPI.getSongs({ mood: "all", limit: 300 });
+            }
+            if (searchVersion !== playlistSearchVersion) return;
+
+            const matches = (Array.isArray(musicLibraryCatalog) ? musicLibraryCatalog : [])
+                .filter(song => {
+                    const ids = [song.youtubeId, song.backupId].filter(Boolean);
+                    const playable = ids.some(id => !state.unavailableVideoIds.has(String(id)));
+                    const text = [song.title, song.artist, song.album].join(" ").toLowerCase();
+                    return playable && text.includes(normalized);
+                })
+                .slice(0, 15);
+
+            resultsEl.innerHTML = "";
+            if (!matches.length) {
+                resultsEl.innerHTML = '<p class="library-empty">No matching songs found in the MEHFIL library.</p>';
+                return;
+            }
+
+            matches.forEach(song => {
+                const row = document.createElement("div");
+                row.className = "library-song-picker-row";
+                const copy = document.createElement("div");
+                copy.className = "library-song-picker-info";
+                const title = document.createElement("strong");
+                title.textContent = song.title;
+                const artist = document.createElement("small");
+                artist.textContent = song.artist || "Unknown artist";
+                copy.append(title, artist);
+
+                const add = document.createElement("button");
+                add.type = "button";
+                add.className = "library-song-picker-add";
+                add.innerHTML = '<i class="fa-solid fa-plus"></i> Add';
+                add.addEventListener("click", async () => {
+                    const playlistId = activePlaylistId;
+                    add.disabled = true;
+                    try {
+                        const result = await MehfilAPI.addSongToPlaylist(playlistId, song.id);
+                        if (result.added) {
+                            window.showMehfilToast("Added to playlist.");
+                        } else {
+                            window.showMehfilToast("This song is already in the playlist.");
+                        }
+                        await openPlaylistDetail(playlistId);
+                        await loadPlaylists();
+                        const input = $("playlistSongSearchInput");
+                        if (input) await searchPlaylistCatalog(input.value);
+                    } catch (error) {
+                        console.error("[MEHFIL] Could not add playlist song:", error);
+                        window.showMehfilToast(error.message || "Could not add this song.");
+                        add.disabled = false;
+                    }
+                });
+                row.append(copy, add);
+                resultsEl.appendChild(row);
+            });
+        } catch (error) {
+            if (searchVersion !== playlistSearchVersion) return;
+            console.error("[MEHFIL] Playlist search failed:", error);
+            resultsEl.innerHTML = '<p class="library-empty">Song search is temporarily unavailable.</p>';
+        }
+    }
+
+    function attachPlaylistControls() {
+        const createForm = $("createPlaylistForm");
+        const nameInput = $("playlistNameInput");
+        if (createForm && nameInput) {
+            createForm.addEventListener("submit", async event => {
+                event.preventDefault();
+                const name = nameInput.value.trim().replace(/\s+/g, " ");
+                if (!name) return;
+                const submit = createForm.querySelector('button[type="submit"]');
+                if (submit) submit.disabled = true;
+                try {
+                    await MehfilAPI.createPlaylist(name);
+                    nameInput.value = "";
+                    await loadPlaylists();
+                    window.showMehfilToast(`Created playlist "${name}".`);
+                } catch (error) {
+                    window.showMehfilToast(error.message || "Could not create playlist.");
+                } finally {
+                    if (submit) submit.disabled = false;
+                }
+            });
+        }
+
+        const searchInput = $("playlistSongSearchInput");
+        const searchForm = $("addPlaylistSongForm");
+        if (searchForm) {
+            searchForm.addEventListener("submit", event => {
+                event.preventDefault();
+                searchPlaylistCatalog(searchInput?.value || "");
+            });
+        }
+        if (searchInput) {
+            searchInput.addEventListener("input", () => {
+                clearTimeout(playlistSearchTimer);
+                playlistSearchTimer = setTimeout(() => searchPlaylistCatalog(searchInput.value), 220);
+            });
+        }
+
+        const playButton = $("playPlaylistButton");
+        if (playButton) {
+            playButton.addEventListener("click", () => {
+                if (activePlaylist) playPlaylistTrack(activePlaylist.songs || [], 0);
+            });
+        }
+
+        const renameButton = $("renamePlaylistButton");
+        if (renameButton) {
+            renameButton.addEventListener("click", async () => {
+                if (!activePlaylist) return;
+                const name = window.prompt("Rename playlist", activePlaylist.name);
+                if (name === null) return;
+                const cleaned = name.trim().replace(/\s+/g, " ");
+                if (!cleaned) {
+                    window.showMehfilToast("Playlist name cannot be empty.");
+                    return;
+                }
+                try {
+                    await MehfilAPI.renamePlaylist(activePlaylist.id, cleaned);
+                    await openPlaylistDetail(activePlaylist.id);
+                    await loadPlaylists();
+                    window.showMehfilToast("Playlist renamed.");
+                } catch (error) {
+                    window.showMehfilToast(error.message || "Could not rename playlist.");
+                }
+            });
+        }
+
+        const deleteButton = $("deletePlaylistButton");
+        if (deleteButton) {
+            deleteButton.addEventListener("click", async () => {
+                if (!activePlaylist) return;
+                if (!window.confirm(`Delete "${activePlaylist.name}" and all songs in it?`)) return;
+                try {
+                    await MehfilAPI.deletePlaylist(activePlaylist.id);
+                    activePlaylist = null;
+                    activePlaylistId = null;
+                    const detail = $("playlistDetail");
+                    if (detail) detail.hidden = true;
+                    await loadPlaylists();
+                    window.showMehfilToast("Playlist deleted.");
+                } catch (error) {
+                    window.showMehfilToast(error.message || "Could not delete playlist.");
+                }
+            });
+        }
+
+        const closeDetail = $("closePlaylistDetailButton");
+        if (closeDetail) {
+            closeDetail.addEventListener("click", () => {
+                activePlaylist = null;
+                activePlaylistId = null;
+                const detail = $("playlistDetail");
+                if (detail) detail.hidden = true;
+            });
+        }
     }
 
     /* FAVORITES MODAL */
