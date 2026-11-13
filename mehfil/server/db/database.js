@@ -306,9 +306,9 @@ const dbApi = {
     const userRows = memoryStore.listening_history
       .filter(item => item.userId === userId)
       .sort((a, b) => b.playedAt - a.playedAt);
-    const keep = new Set(userRows.slice(0, 500).map(item => item.playedAt));
+    const keep = new Set(userRows.slice(0, 500));
     memoryStore.listening_history = memoryStore.listening_history.filter(item =>
-      item.userId !== userId || keep.has(item.playedAt)
+      item.userId !== userId || keep.has(item)
     );
     persistJsonStore();
   },
