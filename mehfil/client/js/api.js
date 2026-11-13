@@ -122,6 +122,13 @@ const MehfilAPI = (function () {
             const searchParams = new URLSearchParams();
             if (params.mood) searchParams.append("mood", params.mood);
             if (params.limit) searchParams.append("limit", params.limit);
+            if (Array.isArray(params.recentIds)) {
+                const recentIds = params.recentIds
+                    .map(Number)
+                    .filter(id => Number.isInteger(id) && id > 0)
+                    .slice(0, 12);
+                if (recentIds.length) searchParams.append("recent", recentIds.join(","));
+            }
             const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
             return request(`/radio/personalized${query}`);
         },
