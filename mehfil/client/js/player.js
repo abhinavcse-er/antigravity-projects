@@ -19,6 +19,7 @@ const MehfilAudioPlayer = (function () {
     let loadGeneration = 0;
     let activeVideoId = null;
     let pendingErrorTimer = null;
+    let playbackRecordedForLoad = false;
 
     // Track user gesture to satisfy browser autoplay policy
     document.addEventListener("click", () => { hasUserInteracted = true; }, { once: true });
@@ -97,6 +98,12 @@ const MehfilAudioPlayer = (function () {
         if (event.data === window.YT.PlayerState.PLAYING) {
             isPlaying = true;
             errorRecoveryInProgress = false;
+            if (!playbackRecordedForLoad) {
+                playbackRecordedForLoad = true;
+                if (typeof window.onSongPlaybackStarted === "function") {
+                    window.onSongPlaybackStarted(currentSong);
+                }
+            }
             updatePlayPauseUI(true);
             startProgressLoop();
         } else if (event.data === window.YT.PlayerState.PAUSED) {
@@ -115,6 +122,7 @@ const MehfilAudioPlayer = (function () {
     }
 
     function onPlayerError(event) {
+        if (!isCurrentPlayerEvent(event)) return;
         const errorCode = event?.data || event;
         if (errorRecoveryInProgress) return;
         errorRecoveryInProgress = true;
@@ -160,6 +168,7 @@ const MehfilAudioPlayer = (function () {
             pendingErrorTimer = null;
         }
         currentSong = song;
+        playbackRecordedForLoad = false;
         triedBackup = false;
         errorRecoveryInProgress = false;
         activeVideoId = String(song.youtubeId || song.backupId || "").trim() || null;
