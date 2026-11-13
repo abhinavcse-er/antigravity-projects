@@ -113,8 +113,18 @@ const MehfilAPI = (function () {
             return request(`/songs/random${q}`);
         },
         getSongById: (id) => request(`/songs/${encodeURIComponent(id)}`),
-        recordPlay: (id) => request(`/songs/${encodeURIComponent(id)}/play`, { method: "POST" }),
+        recordPlay: (id, mood) => request(`/songs/${encodeURIComponent(id)}/play`, {
+            method: "POST",
+            body: JSON.stringify({ mood })
+        }),
         getRadioState: () => request("/radio"),
+        getPersonalRadio: (params = {}) => {
+            const searchParams = new URLSearchParams();
+            if (params.mood) searchParams.append("mood", params.mood);
+            if (params.limit) searchParams.append("limit", params.limit);
+            const query = searchParams.toString() ? `?${searchParams.toString()}` : "";
+            return request(`/radio/personalized${query}`);
+        },
         getRequests: () => request("/requests"),
         submitRequest: (data) => request("/requests", { method: "POST", body: JSON.stringify(data) }),
         voteRequest: (id) => request(`/requests/${encodeURIComponent(id)}/vote`, { method: "POST" }),
