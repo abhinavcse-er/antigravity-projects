@@ -340,7 +340,8 @@
         try {
             const result = await MehfilAPI.getPersonalRadio({
                 mood: state.currentMood,
-                limit: 20
+                limit: 20,
+                recentIds: state.recentSongs.map(song => song.id)
             });
             const songs = (Array.isArray(result?.songs) ? result.songs : []).filter(song => {
                 const ids = [song.youtubeId, song.backupId].filter(Boolean);
