@@ -5,6 +5,7 @@ const db = require('../db/database');
 const songService = require('../services/songService');
 const presenceService = require('../services/presenceService');
 const radioService = require('../services/radioService');
+const communityService = require('../services/communityService');
 
 let presenceBroadcastTimer = null;
 
@@ -217,30 +218,29 @@ router.post('/requests/:id/vote', writeLimiter, (req, res) => {
 });
 
 // GET /api/community
+// Community chat is a shared live feed; never serve a cached snapshot.
 router.get('/community', (req, res) => {
-  res.json(db.getCommunityMessages());
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(db.getCommunityMessages(40));
 });
 
 // POST /api/community
+// Persist first, then broadcast the same database row to every connected listener.
 router.post('/community', writeLimiter, (req, res) => {
-  const { userName, userAvatar, mood, text, isShayari } = req.body || {};
-  if (typeof text !== 'string' || !text.trim()) {
+  const message = communityService.normalizeCommunityMessage(req.body || {});
+  if (!message) {
     return res.status(400).json({ error: 'Message text cannot be empty' });
   }
 
-  const newMsg = db.addCommunityMessage({
-    userName: typeof userName === 'string' ? userName.trim().slice(0, 60) || 'Musafir' : 'Musafir',
-    userAvatar: typeof userAvatar === 'string' ? userAvatar.slice(0, 12) : '🎶',
-    mood: validMoods.has(mood) ? mood : 'love',
-    text: text.trim().slice(0, 1000),
-    isShayari: !!isShayari
-  });
-
-  if (req.app.get('io')) {
-    req.app.get('io').emit('community:message', newMsg);
+  try {
+    const newMsg = db.addCommunityMessage(message);
+    const io = req.app.get('io');
+    if (io && newMsg) io.emit('community:message', newMsg);
+    return res.status(201).json(newMsg);
+  } catch (error) {
+    console.error('[COMMUNITY] Could not save message:', error);
+    return res.status(500).json({ error: 'Message could not be saved. Please try again.' });
   }
-
-  res.status(201).json(newMsg);
 });
 
 // POST /api/community/:id/like

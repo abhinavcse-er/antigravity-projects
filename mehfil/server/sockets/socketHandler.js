@@ -1,6 +1,7 @@
 const presenceService = require('../services/presenceService');
 const radioService = require('../services/radioService');
 const db = require('../db/database');
+const communityService = require('../services/communityService');
 
 let presenceBroadcastTimer = null;
 const socketEventWindows = new Map();
@@ -49,16 +50,19 @@ function setupSockets(io) {
     socket.on('community:message', (data = {}) => {
       if (!allowSocketEvent(socket, 'community:message', 5)) return;
       const client = presenceService.getClient(socket.id);
-      const text = typeof data.text === 'string' ? data.text.trim().slice(0, 1000) : '';
-      if (!text) return;
-      const newMsg = db.addCommunityMessage({
-        userName: String(data.userName || client?.nickname || 'Musafir').slice(0, 60),
-        userAvatar: data.userAvatar || client?.avatar || '🎶',
-        mood: data.mood || client?.mood || 'love',
-        text,
-        isShayari: !!data.isShayari
+      const message = communityService.normalizeCommunityMessage(data, {
+        userName: client?.nickname || 'Musafir',
+        userAvatar: client?.avatar || '🎶',
+        mood: client?.mood || 'love'
       });
-      io.emit('community:message', newMsg);
+      if (!message) return;
+
+      try {
+        const newMsg = db.addCommunityMessage(message);
+        if (newMsg) io.emit('community:message', newMsg);
+      } catch (error) {
+        console.error('[COMMUNITY] Socket message could not be saved:', error);
+      }
     });
 
     socket.on('community:reaction', (reaction = {}) => {
