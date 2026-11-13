@@ -16,6 +16,9 @@ const MehfilAudioPlayer = (function () {
     let triedBackup = false;
     let errorRecoveryInProgress = false;
     let hasUserInteracted = false;
+    let loadGeneration = 0;
+    let activeVideoId = null;
+    let pendingErrorTimer = null;
 
     // Track user gesture to satisfy browser autoplay policy
     document.addEventListener("click", () => { hasUserInteracted = true; }, { once: true });
@@ -82,13 +85,18 @@ const MehfilAudioPlayer = (function () {
         }
     }
 
+    function isCurrentPlayerEvent(event) {
+        if (!activeVideoId) return true;
+        const eventVideoId = event?.target?.getVideoData?.()?.video_id;
+        return !eventVideoId || eventVideoId === activeVideoId;
+    }
+
     function onPlayerStateChange(event) {
-        if (!window.YT) return;
+        if (!window.YT || !isCurrentPlayerEvent(event)) return;
 
         if (event.data === window.YT.PlayerState.PLAYING) {
             isPlaying = true;
-            triedBackup = false;
-            errorRecoveryInProgress = false; // A playable source was found
+            errorRecoveryInProgress = false;
             updatePlayPauseUI(true);
             startProgressLoop();
         } else if (event.data === window.YT.PlayerState.PAUSED) {
@@ -99,55 +107,76 @@ const MehfilAudioPlayer = (function () {
             isPlaying = false;
             updatePlayPauseUI(false);
             stopProgressLoop();
-            if (typeof window.onSongEnded === "function") {
+            const endedGeneration = loadGeneration;
+            if (typeof window.onSongEnded === "function" && endedGeneration === loadGeneration) {
                 window.onSongEnded();
             }
         }
     }
 
     function onPlayerError(event) {
-        const errorCode = event.data || event;
+        const errorCode = event?.data || event;
         if (errorRecoveryInProgress) return;
         errorRecoveryInProgress = true;
-        console.warn(`[PLAYER] YouTube rejected this video (code ${errorCode}); trying recovery.`);
+        const failedSong = currentSong;
+        const failedGeneration = loadGeneration;
+        console.warn(`[PLAYER] YouTube rejected "${failedSong?.title || "this video"}" (code ${errorCode}).`);
 
-        // If song has a backup ID and we haven't tried it yet, try the backup stream!
-        if (currentSong && currentSong.backupId && currentSong.backupId !== currentSong.youtubeId && !triedBackup) {
+        // YouTube errors 101/150 mean embedding is forbidden. Try one distinct
+        // backup ID, then skip this track; never retry the same rejected video.
+        const backupId = String(failedSong?.backupId || "").trim();
+        if (backupId && backupId !== activeVideoId && !triedBackup &&
+            ytPlayer && typeof ytPlayer.loadVideoById === "function") {
             triedBackup = true;
-            // Let exactly one error from the backup source enter recovery.
-            // Once that fails, the recovery lock stays set until the next track.
+            activeVideoId = backupId;
             errorRecoveryInProgress = false;
-            console.log(`[PLAYER] Trying backup source for "${currentSong.title}"...`);
-            if (ytPlayer && typeof ytPlayer.loadVideoById === "function") {
-                ytPlayer.loadVideoById({
-                    videoId: currentSong.backupId,
-                    startSeconds: 0
-                });
-                return;
-            }
+            console.log(`[PLAYER] Trying backup source for "${failedSong.title}"...`);
+            ytPlayer.loadVideoById({ videoId: backupId, startSeconds: 0 });
+            return;
         }
 
-        // Otherwise smoothly advance to next song without alarming the user
-        // The video cannot be embedded (for example YouTube error 150).
-        // Skip it once; the next track gets a fresh recovery state.
-        setTimeout(() => {
-            // loadSong() resets this lock for the next track.
-            if (typeof window.onSongEnded === "function") {
-                window.onSongEnded();
-            }
-        }, 800);
+        if (pendingErrorTimer) clearTimeout(pendingErrorTimer);
+        pendingErrorTimer = setTimeout(() => {
+            pendingErrorTimer = null;
+            // Ignore delayed errors from a previous track after the user has
+            // already selected another song.
+            if (failedGeneration !== loadGeneration || failedSong !== currentSong) return;
+            isPlaying = false;
+            stopProgressLoop();
+            updatePlayPauseUI(false);
+            if (typeof window.onSongEnded === "function") window.onSongEnded();
+        }, 500);
     }
 
     function loadSong(song, autoPlay = true, seekSeconds = 0) {
+        if (!song) return;
+        loadGeneration++;
+        if (pendingErrorTimer) {
+            clearTimeout(pendingErrorTimer);
+            pendingErrorTimer = null;
+        }
         currentSong = song;
         triedBackup = false;
         errorRecoveryInProgress = false;
-        if (!song) return;
+        activeVideoId = String(song.youtubeId || song.backupId || "").trim() || null;
+        isPlaying = false;
+        stopProgressLoop();
 
         console.log(`[PLAYER] Tuning into: "${song.title}" - ${song.artist}`);
 
+        if (!activeVideoId) {
+            updatePlayPauseUI(false);
+            if (typeof window.onSongEnded === "function") {
+                const failedGeneration = loadGeneration;
+                setTimeout(() => {
+                    if (failedGeneration === loadGeneration) window.onSongEnded();
+                }, 0);
+            }
+            return;
+        }
+
         if (ytReady && ytPlayer && typeof ytPlayer.loadVideoById === "function") {
-            const vidId = song.youtubeId || song.backupId;
+            const vidId = activeVideoId;
             if (autoPlay && hasUserInteracted) {
                 ytPlayer.loadVideoById({
                     videoId: vidId,
