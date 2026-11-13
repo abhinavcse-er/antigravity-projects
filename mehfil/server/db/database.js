@@ -110,6 +110,14 @@ function setupSqliteSchema() {
       createdAt INTEGER NOT NULL,
       UNIQUE(userId, songId)
     );
+
+    CREATE TABLE IF NOT EXISTS listening_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      songId INTEGER,
+      mood TEXT NOT NULL,
+      playedAt INTEGER NOT NULL
+    );
   `);
 
   db.exec(`
@@ -117,6 +125,7 @@ function setupSqliteSchema() {
     CREATE INDEX IF NOT EXISTS idx_requests_votes_created ON requests(votes DESC, createdAt DESC);
     CREATE INDEX IF NOT EXISTS idx_community_timestamp ON community_messages(timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_favorites_user_created ON favorites(userId, createdAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_history_user_played ON listening_history(userId, playedAt DESC);
   `);
 
   // Check if songs exist
@@ -179,8 +188,12 @@ function setupJsonStore() {
       songs: seedSongs.map((s, idx) => ({ ...s, id: idx + 1, plays: Math.floor(Math.random() * 500) + 120 })),
       community_messages: seedCommunityMessages.map((m, idx) => ({ ...m, id: idx + 1 })),
       requests: seedRequests.map((r, idx) => ({ ...r, id: idx + 1 })),
-      favorites: []
+      favorites: [],
+      listening_history: []
     };
+    persistJsonStore();
+  } else if (!Array.isArray(memoryStore.listening_history)) {
+    memoryStore.listening_history = [];
     persistJsonStore();
   }
 }
@@ -262,6 +275,60 @@ const dbApi = {
         persistJsonStore();
       }
     }
+  },
+
+  recordListening: (userId, songId, mood) => {
+    if (!userId || !mood) return;
+    const numericSongId = Number.isInteger(Number(songId)) && Number(songId) > 0
+      ? Number(songId)
+      : null;
+    const playedAt = Date.now();
+
+    if (isNativeSqlite) {
+      db.prepare(
+        'INSERT INTO listening_history (userId, songId, mood, playedAt) VALUES (?, ?, ?, ?)'
+      ).run(userId, numericSongId, mood, playedAt);
+      db.prepare(`
+        DELETE FROM listening_history
+        WHERE userId = ?
+          AND id NOT IN (
+            SELECT id FROM listening_history
+            WHERE userId = ?
+            ORDER BY playedAt DESC, id DESC
+            LIMIT 500
+          )
+      `).run(userId, userId);
+      return;
+    }
+
+    if (!Array.isArray(memoryStore.listening_history)) memoryStore.listening_history = [];
+    memoryStore.listening_history.push({ userId, songId: numericSongId, mood, playedAt });
+    const userRows = memoryStore.listening_history
+      .filter(item => item.userId === userId)
+      .sort((a, b) => b.playedAt - a.playedAt);
+    const keep = new Set(userRows.slice(0, 500).map(item => item.playedAt));
+    memoryStore.listening_history = memoryStore.listening_history.filter(item =>
+      item.userId !== userId || keep.has(item.playedAt)
+    );
+    persistJsonStore();
+  },
+
+  getListeningHistory: (userId, limit = 100) => {
+    const safeLimit = Math.max(1, Math.min(500, Math.floor(Number(limit) || 100)));
+    if (!userId) return [];
+    if (isNativeSqlite) {
+      return db.prepare(`
+        SELECT songId, mood, playedAt
+        FROM listening_history
+        WHERE userId = ?
+        ORDER BY playedAt DESC, id DESC
+        LIMIT ?
+      `).all(userId, safeLimit);
+    }
+    return (memoryStore.listening_history || [])
+      .filter(item => item.userId === userId)
+      .sort((a, b) => b.playedAt - a.playedAt)
+      .slice(0, safeLimit);
   },
 
   getRequests: () => {
