@@ -130,8 +130,40 @@ router.get('/songs/:id', (req, res) => {
 
 // POST /api/songs/:id/play
 router.post('/songs/:id/play', writeLimiter, (req, res) => {
-  songService.recordPlay(req.params.id);
+  const userId = String(req.headers['x-user-id'] || '').trim();
+  songService.recordPlay(
+    req.params.id,
+    validClientId(userId) ? userId : null,
+    validMoods.has(req.body?.mood) ? req.body.mood : null
+  );
   res.json({ success: true });
+});
+
+// GET /api/radio/personalized
+// Recommendations are private to the browser's MEHFIL client ID.
+router.get('/radio/personalized', (req, res) => {
+  const userId = String(req.headers['x-user-id'] || '').trim();
+  if (!validClientId(userId)) {
+    return res.status(400).json({ error: 'A valid client ID is required' });
+  }
+
+  const mood = validMoods.has(req.query.mood) ? req.query.mood : 'love';
+  const requestedLimit = Number(req.query.limit) || 20;
+  const limit = Math.max(1, Math.min(30, Math.floor(requestedLimit)));
+  const songs = songService.getPersonalizedSongs(userId, mood, limit);
+  const hasHistory = db.getListeningHistory(userId, 1).length > 0;
+  const hasFavorites = db.getFavorites(userId).length > 0;
+
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json({
+    songs,
+    profile: {
+      mood,
+      basedOnHistory: hasHistory,
+      basedOnFavorites: hasFavorites,
+      personalized: hasHistory || hasFavorites
+    }
+  });
 });
 
 // GET /api/radio
