@@ -1,0 +1,31 @@
+name: MEHFIL QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mehfil/**"
+  pull_request:
+    paths:
+      - "mehfil/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-tests:
+    name: Run MEHFIL smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run smoke tests
+        run: npm test
+        working-directory: mehfil
