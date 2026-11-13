@@ -7569,3 +7569,16 @@ body.mood-late-night { --accent: #a58aff; --accent-2: #5869cf; }
 @media (max-width: 1240px) {
     .pwa-header-install { display: none !important; }
 }
+
+
+/* Respect the visitor's reduced-motion accessibility preference. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

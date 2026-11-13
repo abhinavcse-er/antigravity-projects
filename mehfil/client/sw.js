@@ -57,10 +57,18 @@ self.addEventListener("fetch", event => {
     ) return;
 
     event.respondWith((async () => {
-        const cache = await caches.open(CACHE_NAME);
+        // Cache storage can be unavailable in private/restricted browser contexts.
+        // It must never prevent a normal online request from reaching the network.
+        let cache = null;
+        try {
+            cache = await caches.open(CACHE_NAME);
+        } catch (cacheError) {
+            console.warn("[MEHFIL PWA] Cache storage unavailable:", cacheError);
+        }
+
         try {
             const response = await fetch(request);
-            if (response && response.ok && response.type === "basic") {
+            if (cache && response && response.ok && response.type === "basic") {
                 try {
                     await cache.put(request, response.clone());
                 } catch (cacheError) {
@@ -70,11 +78,18 @@ self.addEventListener("fetch", event => {
             }
             return response;
         } catch (networkError) {
-            const cached = await cache.match(request);
-            if (cached) return cached;
+            if (cache) {
+                try {
+                    const cached = await cache.match(request);
+                    if (cached) return cached;
 
-            if (request.mode === "navigate") {
-                return (await cache.match("/index.html")) || Response.error();
+                    if (request.mode === "navigate") {
+                        const appShell = await cache.match("/index.html");
+                        if (appShell) return appShell;
+                    }
+                } catch (cacheError) {
+                    console.warn("[MEHFIL PWA] Offline cache lookup failed:", cacheError);
+                }
             }
             return Response.error();
         }

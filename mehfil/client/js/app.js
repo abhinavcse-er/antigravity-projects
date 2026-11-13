@@ -46,6 +46,9 @@
             toast = document.createElement("div");
             toast.id = "mehfilToast";
             toast.className = "mehfil-toast";
+            toast.setAttribute("role", "status");
+            toast.setAttribute("aria-live", "polite");
+            toast.setAttribute("aria-atomic", "true");
             document.body.appendChild(toast);
         }
         toast.textContent = text;
