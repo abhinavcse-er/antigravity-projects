@@ -118,6 +118,25 @@ function setupSqliteSchema() {
       mood TEXT NOT NULL,
       playedAt INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS playlists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      userId TEXT NOT NULL,
+      name TEXT NOT NULL COLLATE NOCASE,
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      UNIQUE(userId, name)
+    );
+
+    CREATE TABLE IF NOT EXISTS playlist_songs (
+      playlistId INTEGER NOT NULL,
+      songId INTEGER NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      addedAt INTEGER NOT NULL,
+      PRIMARY KEY (playlistId, songId),
+      FOREIGN KEY (playlistId) REFERENCES playlists(id) ON DELETE CASCADE,
+      FOREIGN KEY (songId) REFERENCES songs(id) ON DELETE CASCADE
+    );
   `);
 
   db.exec(`
@@ -126,6 +145,8 @@ function setupSqliteSchema() {
     CREATE INDEX IF NOT EXISTS idx_community_timestamp ON community_messages(timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_favorites_user_created ON favorites(userId, createdAt DESC);
     CREATE INDEX IF NOT EXISTS idx_history_user_played ON listening_history(userId, playedAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_playlists_user_updated ON playlists(userId, updatedAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_playlist_songs_position ON playlist_songs(playlistId, position);
   `);
 
   // Check if songs exist
@@ -192,9 +213,21 @@ function setupJsonStore() {
       listening_history: []
     };
     persistJsonStore();
-  } else if (!Array.isArray(memoryStore.listening_history)) {
-    memoryStore.listening_history = [];
-    persistJsonStore();
+  } else {
+    let migrated = false;
+    if (!Array.isArray(memoryStore.listening_history)) {
+      memoryStore.listening_history = [];
+      migrated = true;
+    }
+    if (!Array.isArray(memoryStore.playlists)) {
+      memoryStore.playlists = [];
+      migrated = true;
+    }
+    if (!Array.isArray(memoryStore.playlist_songs)) {
+      memoryStore.playlist_songs = [];
+      migrated = true;
+    }
+    if (migrated) persistJsonStore();
   }
 }
 
@@ -458,6 +491,200 @@ const dbApi = {
         return song ? { ...song, favoritedAt: f.createdAt } : null;
       }).filter(Boolean);
     }
+  },
+
+  getPlaylists: (userId) => {
+    if (!userId) return [];
+    if (isNativeSqlite) {
+      return db.prepare(`
+        SELECT p.id, p.name, p.createdAt, p.updatedAt,
+          COUNT(ps.songId) AS songCount
+        FROM playlists p
+        LEFT JOIN playlist_songs ps ON ps.playlistId = p.id
+        WHERE p.userId = ?
+        GROUP BY p.id
+        ORDER BY p.updatedAt DESC, p.id DESC
+      `).all(userId);
+    }
+    return (memoryStore.playlists || [])
+      .filter(item => item.userId === userId)
+      .map(item => ({
+        id: item.id,
+        name: item.name,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        songCount: (memoryStore.playlist_songs || []).filter(link => link.playlistId === item.id).length
+      }))
+      .sort((a, b) => b.updatedAt - a.updatedAt || b.id - a.id);
+  },
+
+  getPlaylist: (userId, playlistId) => {
+    if (!userId) return null;
+    if (isNativeSqlite) {
+      const playlist = db.prepare(
+        'SELECT id, name, createdAt, updatedAt FROM playlists WHERE id = ? AND userId = ?'
+      ).get(playlistId, userId);
+      if (!playlist) return null;
+      const songs = db.prepare(`
+        SELECT s.*, ps.position, ps.addedAt
+        FROM playlist_songs ps
+        JOIN songs s ON s.id = ps.songId
+        WHERE ps.playlistId = ?
+        ORDER BY ps.position ASC, ps.addedAt ASC
+      `).all(playlistId);
+      return { ...playlist, songs };
+    }
+    const playlist = (memoryStore.playlists || []).find(item =>
+      item.id === Number(playlistId) && item.userId === userId
+    );
+    if (!playlist) return null;
+    const songs = (memoryStore.playlist_songs || [])
+      .filter(link => link.playlistId === playlist.id)
+      .sort((a, b) => a.position - b.position || a.addedAt - b.addedAt)
+      .map(link => memoryStore.songs.find(song => song.id === link.songId))
+      .filter(Boolean);
+    return { ...playlist, songs };
+  },
+
+  createPlaylist: (userId, name) => {
+    if (!userId || !name) return null;
+    const now = Date.now();
+    if (isNativeSqlite) {
+      const info = db.prepare(
+        'INSERT INTO playlists (userId, name, createdAt, updatedAt) VALUES (?, ?, ?, ?)'
+      ).run(userId, name, now, now);
+      return db.prepare(
+        'SELECT id, name, createdAt, updatedAt FROM playlists WHERE id = ? AND userId = ?'
+      ).get(info.lastInsertRowid, userId);
+    }
+    if (!Array.isArray(memoryStore.playlists)) memoryStore.playlists = [];
+    const duplicate = memoryStore.playlists.some(item =>
+      item.userId === userId && item.name.toLowerCase() === name.toLowerCase()
+    );
+    if (duplicate) return null;
+    const id = memoryStore.playlists.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1;
+    const playlist = { id, userId, name, createdAt: now, updatedAt: now };
+    memoryStore.playlists.push(playlist);
+    persistJsonStore();
+    return { ...playlist };
+  },
+
+  renamePlaylist: (userId, playlistId, name) => {
+    if (!userId || !name) return null;
+    const now = Date.now();
+    if (isNativeSqlite) {
+      const result = db.prepare(
+        'UPDATE playlists SET name = ?, updatedAt = ? WHERE id = ? AND userId = ?'
+      ).run(name, now, playlistId, userId);
+      if (!result.changes) return null;
+      return db.prepare(
+        'SELECT id, name, createdAt, updatedAt FROM playlists WHERE id = ? AND userId = ?'
+      ).get(playlistId, userId);
+    }
+    const playlist = (memoryStore.playlists || []).find(item =>
+      item.id === Number(playlistId) && item.userId === userId
+    );
+    if (!playlist) return null;
+    const duplicate = memoryStore.playlists.some(item =>
+      item.userId === userId && item.id !== playlist.id &&
+      item.name.toLowerCase() === name.toLowerCase()
+    );
+    if (duplicate) return null;
+    playlist.name = name;
+    playlist.updatedAt = now;
+    persistJsonStore();
+    return { ...playlist };
+  },
+
+  deletePlaylist: (userId, playlistId) => {
+    if (!userId) return false;
+    if (isNativeSqlite) {
+      return db.prepare('DELETE FROM playlists WHERE id = ? AND userId = ?')
+        .run(playlistId, userId).changes > 0;
+    }
+    const index = (memoryStore.playlists || []).findIndex(item =>
+      item.id === Number(playlistId) && item.userId === userId
+    );
+    if (index < 0) return false;
+    const [removed] = memoryStore.playlists.splice(index, 1);
+    memoryStore.playlist_songs = (memoryStore.playlist_songs || [])
+      .filter(link => link.playlistId !== removed.id);
+    persistJsonStore();
+    return true;
+  },
+
+  addSongToPlaylist: (userId, playlistId, songId) => {
+    if (!userId) return null;
+    const numericSongId = Number(songId);
+    const numericPlaylistId = Number(playlistId);
+    const now = Date.now();
+    if (isNativeSqlite) {
+      const playlist = db.prepare('SELECT id FROM playlists WHERE id = ? AND userId = ?')
+        .get(numericPlaylistId, userId);
+      const song = db.prepare('SELECT id FROM songs WHERE id = ?').get(numericSongId);
+      if (!playlist || !song) return null;
+      const position = db.prepare(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS nextPosition FROM playlist_songs WHERE playlistId = ?'
+      ).get(numericPlaylistId).nextPosition;
+      const result = db.prepare(
+        'INSERT OR IGNORE INTO playlist_songs (playlistId, songId, position, addedAt) VALUES (?, ?, ?, ?)'
+      ).run(numericPlaylistId, numericSongId, position, now);
+      if (result.changes) {
+        db.prepare('UPDATE playlists SET updatedAt = ? WHERE id = ? AND userId = ?')
+          .run(now, numericPlaylistId, userId);
+      }
+      return { added: result.changes > 0 };
+    }
+    const playlist = (memoryStore.playlists || []).find(item =>
+      item.id === numericPlaylistId && item.userId === userId
+    );
+    const song = memoryStore.songs.find(item => item.id === numericSongId);
+    if (!playlist || !song) return null;
+    if (!Array.isArray(memoryStore.playlist_songs)) memoryStore.playlist_songs = [];
+    const exists = memoryStore.playlist_songs.some(link =>
+      link.playlistId === numericPlaylistId && link.songId === numericSongId
+    );
+    if (exists) return { added: false };
+    const links = memoryStore.playlist_songs.filter(link => link.playlistId === numericPlaylistId);
+    const position = links.reduce((max, link) => Math.max(max, Number(link.position) || 0), -1) + 1;
+    memoryStore.playlist_songs.push({ playlistId: numericPlaylistId, songId: numericSongId, position, addedAt: now });
+    playlist.updatedAt = now;
+    persistJsonStore();
+    return { added: true };
+  },
+
+  removeSongFromPlaylist: (userId, playlistId, songId) => {
+    if (!userId) return false;
+    const numericPlaylistId = Number(playlistId);
+    const numericSongId = Number(songId);
+    const now = Date.now();
+    if (isNativeSqlite) {
+      const playlist = db.prepare('SELECT id FROM playlists WHERE id = ? AND userId = ?')
+        .get(numericPlaylistId, userId);
+      if (!playlist) return false;
+      const result = db.prepare(
+        'DELETE FROM playlist_songs WHERE playlistId = ? AND songId = ?'
+      ).run(numericPlaylistId, numericSongId);
+      if (result.changes) {
+        db.prepare('UPDATE playlists SET updatedAt = ? WHERE id = ? AND userId = ?')
+          .run(now, numericPlaylistId, userId);
+      }
+      return result.changes > 0;
+    }
+    const playlist = (memoryStore.playlists || []).find(item =>
+      item.id === numericPlaylistId && item.userId === userId
+    );
+    if (!playlist) return false;
+    const before = (memoryStore.playlist_songs || []).length;
+    memoryStore.playlist_songs = (memoryStore.playlist_songs || []).filter(link =>
+      !(link.playlistId === numericPlaylistId && link.songId === numericSongId)
+    );
+    const removed = memoryStore.playlist_songs.length < before;
+    if (removed) {
+      playlist.updatedAt = now;
+      persistJsonStore();
+    }
+    return removed;
   },
 
   toggleFavorite: (userId, songId) => {
