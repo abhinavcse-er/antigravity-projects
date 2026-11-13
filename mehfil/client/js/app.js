@@ -15,7 +15,8 @@
         isRadioSyncMode: false,
         isShuffle: false,
         isRepeat: false,
-        recentSongs: [],
+        recentSongs: (() => { try { const saved = JSON.parse(localStorage.getItem('mehfil_recent_songs') || '[]'); return Array.isArray(saved) ? saved.slice(0, 6) : []; } catch { return []; } })(),
+
         favoriteSongIds: new Set(),
         moodData: {
             love: { title: "LOVE", quote: "“Pyaar ke gaane, dil se dil tak.”", action: "WHY LOVE?" },
@@ -29,6 +30,7 @@
 
     // Helper: Select element
     const $ = (id) => document.getElementById(id);
+    let moodLoadVersion = 0;
 
     // Toast Notification
     window.showMehfilToast = function (text) {
@@ -69,6 +71,7 @@
         attachQuickReactions();
         attachRadioModeToggle();
         loadFavorites();
+        renderRecentList();
 
         // Load initial mood songs and play
         await switchMood("love", false);
@@ -273,6 +276,7 @@
 
     async function switchMood(mood, autoPlay = true) {
         if (!state.moodData[mood]) return;
+        const requestVersion = ++moodLoadVersion;
         state.currentMood = mood;
         state.isRadioSyncMode = false;
         updateRadioBadgeUI();
@@ -301,6 +305,7 @@
         // Fetch curated songs for this mood from backend API
         try {
             const songs = await MehfilAPI.getSongs({ mood });
+            if (requestVersion !== moodLoadVersion || state.currentMood !== mood) return;
             if (songs && songs.length) {
                 state.songs = songs;
                 state.currentIndex = 0;
@@ -349,6 +354,16 @@
 
     function playSong(song, autoPlay = true, seekSeconds = 0) {
         if (!song) return;
+
+        // Align the active queue for tracks started from Search, Explore,
+        // Favorites and Recently Played as well as mood-library controls.
+        const queueIndex = state.songs.findIndex(item => String(item.id) === String(song.id));
+        if (queueIndex >= 0) {
+            state.currentIndex = queueIndex;
+        } else {
+            state.songs = [song, ...state.songs.filter(item => String(item.id) !== String(song.id))];
+            state.currentIndex = 0;
+        }
         state.currentSong = song;
 
         // Update Track Metadata in UI
@@ -400,6 +415,11 @@
         state.recentSongs = state.recentSongs.filter(s => s.id !== song.id);
         state.recentSongs.unshift(song);
         if (state.recentSongs.length > 6) state.recentSongs.pop();
+        try {
+            localStorage.setItem("mehfil_recent_songs", JSON.stringify(state.recentSongs));
+        } catch (error) {
+            console.warn("[MEHFIL] Could not persist recently played tracks:", error);
+        }
 
         renderRecentList();
     }
@@ -630,10 +650,12 @@
     }
 
     window.onRadioTrackChange = function (radioState) {
-        if (state.isRadioSyncMode && radioState && radioState.currentSong) {
-            window.showMehfilToast(`📻 Radio Station: "${radioState.currentSong.title}"`);
-            playSong(radioState.currentSong, true, radioState.elapsedSeconds);
-        }
+        if (!state.isRadioSyncMode || !radioState?.currentSong) return;
+        const incoming = radioState.currentSong;
+        // Duplicate broadcasts/reconnects must not reload the same long track.
+        if (state.currentSong && String(state.currentSong.id) === String(incoming.id)) return;
+        window.showMehfilToast(`📻 Radio Station: "${incoming.title}"`);
+        playSong(incoming, true, Math.max(0, Number(radioState.elapsedSeconds) || 0));
     };
 
     /* =====================================================
