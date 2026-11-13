@@ -36,6 +36,7 @@ The original `apnimehfil.netlify.app` was a static frontend prototype with place
    - Retro spectrum audio wave visualizer and floating particle engine.
    - Collapsible persistent bottom player bar with volume control, seek scrubber, shuffle, and repeat.
    - Complete keyboard shortcuts support (`Space`, `N`, `P`, `M`, `S`, `R`, `1-6`, `Esc`).
+   - **Personal Radio**: Builds a private, adaptive queue from the listener's selected mood, confirmed listening history, recently played tracks and favorites. It adds artist/mood variety and refreshes the queue when the current set ends. The first version uses a lightweight weighted recommendation engine rather than an external generative-AI API.
 
 ---
 
@@ -83,6 +84,7 @@ The application will start on **http://localhost:3000**.
 | `/api/songs/random` | `GET` | Get a random surprise song (optionally `?mood=`) |
 | `/api/songs/:id/play` | `POST` | Record a song play |
 | `/api/radio` | `GET` | Current synchronized radio track, elapsed seconds & next track |
+| `/api/radio/personalized` | `GET` | Private mood/history/favorites-based Personal Radio queue (`x-user-id` header) |
 | `/api/requests` | `GET` | Active song requests queue sorted by votes |
 | `/api/requests` | `POST` | Submit a new song request with title, artist, mood, dedication |
 | `/api/requests/:id/vote`| `POST` | Upvote a song request |
