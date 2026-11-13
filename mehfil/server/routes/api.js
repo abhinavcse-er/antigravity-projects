@@ -166,7 +166,8 @@ router.get('/radio/personalized', (req, res) => {
       mood,
       basedOnHistory: hasHistory,
       basedOnFavorites: hasFavorites,
-      personalized: hasHistory || hasFavorites
+      basedOnRecentlyPlayed: recentSongIds.length > 0,
+      personalized: hasHistory || hasFavorites || recentSongIds.length > 0
     }
   });
 });
