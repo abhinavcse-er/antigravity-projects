@@ -37,13 +37,13 @@ test("HTTP and Socket.IO message paths both persist before broadcasting", () => 
     const routes = read("server/routes/api.js");
     const sockets = read("server/sockets/socketHandler.js");
 
-    assert.match(routes, /communityService\.normalizeCommunityMessage/);
-    assert.match(routes, /db\.addCommunityMessage\(message\)/);
-    assert.match(routes, /io\.emit\('community:message', newMsg\)/);
+    assert.ok(routes.includes("communityService.normalizeCommunityMessage"));
+    assert.ok(routes.includes("db.addCommunityMessage(message)"));
+    assert.ok(routes.includes("io.emit('community:message', newMsg)"));
 
-    assert.match(sockets, /communityService\.normalizeCommunityMessage/);
-    assert.match(sockets, /db\.addCommunityMessage\(message\)/);
-    assert.match(sockets, /io\.emit\('community:message', newMsg\)/);
+    assert.ok(sockets.includes("communityService.normalizeCommunityMessage"));
+    assert.ok(sockets.includes("db.addCommunityMessage(message)"));
+    assert.ok(sockets.includes("io.emit('community:message', newMsg)"));
 });
 
 test("community history is not cached and is refreshed after Socket.IO reconnect", () => {
@@ -51,10 +51,11 @@ test("community history is not cached and is refreshed after Socket.IO reconnect
     const api = read("client/js/api.js");
     const sockets = read("client/js/socket.js");
 
-    assert.match(routes, /router\.get\('\\/community'[\\s\\S]*?Cache-Control', 'no-store'/);
-    assert.match(api, /endpoint\.startsWith\\("\\/community"\\)\\) return 0/);
-    assert.match(sockets, /socket\.on\\("community:message"/);
-    assert.match(sockets, /window\.onCommunitySocketReconnected/);
+    assert.ok(routes.includes("router.get('/community'"));
+    assert.ok(routes.includes("res.setHeader('Cache-Control', 'no-store')"));
+    assert.ok(api.includes('if (endpoint.startsWith("/community")) return 0;'));
+    assert.ok(sockets.includes('socket.on("community:message"'));
+    assert.ok(sockets.includes("window.onCommunitySocketReconnected"));
 });
 
 test("community likes are persisted and broadcast to every connected listener", () => {
@@ -62,38 +63,38 @@ test("community likes are persisted and broadcast to every connected listener", 
     const sockets = read("client/js/socket.js");
     const app = read("client/js/app.js");
 
-    assert.match(routes, /db\.likeCommunityMessage\(req\.params\.id\)/);
-    assert.match(routes, /io\.emit\('community:like', updated\)/);
-    assert.match(sockets, /socket\.on\\("community:like"/);
-    assert.match(app, /window\.onCommunityLikeReceived = function/);
-    assert.match(app, /updateCommunityLikeCount\\(updated\\)/);
+    assert.ok(routes.includes("db.likeCommunityMessage(req.params.id)"));
+    assert.ok(routes.includes("io.emit('community:like', updated)"));
+    assert.ok(sockets.includes('socket.on("community:like"'));
+    assert.ok(app.includes("window.onCommunityLikeReceived = function"));
+    assert.ok(app.includes("updateCommunityLikeCount(updated)"));
 });
 
 test("chat content is rendered as text, deduplicated by database ID, and limited to 40 messages", () => {
     const app = read("client/js/app.js");
 
-    assert.match(app, /const communityMessages = new Map\\(\\)/);
-    assert.match(app, /const COMMUNITY_MESSAGE_LIMIT = 40/);
-    assert.match(app, /function rememberCommunityMessage\\(/);
-    assert.match(app, /messageText\.textContent = msg\.text/);
-    assert.match(app, /userName\.textContent = msg\.userName/);
-    assert.match(app, /appendCommunityMessage\\(savedMessage, true\\)/);
-    assert.doesNotMatch(app, /bubble\.innerHTML/);
+    assert.ok(app.includes("const communityMessages = new Map()"));
+    assert.ok(app.includes("const COMMUNITY_MESSAGE_LIMIT = 40"));
+    assert.ok(app.includes("function rememberCommunityMessage("));
+    assert.ok(app.includes("messageText.textContent = msg.text"));
+    assert.ok(app.includes("userName.textContent = msg.userName"));
+    assert.ok(app.includes("appendCommunityMessage(savedMessage, true)"));
+    assert.ok(!app.includes("bubble.innerHTML"));
 });
 
 test("Baithak stream is accessible and the composer caps comments at 1000 characters", () => {
     const html = read("client/index.html");
 
-    assert.match(html, /id="communityMessagesStream" role="log" aria-live="polite"/);
-    assert.match(html, /id="chatTextInput"[^>]*maxlength="1000"/);
-    assert.match(html, /Live chat · Messages are shared with everyone/);
+    assert.ok(html.includes('id="communityMessagesStream" role="log" aria-live="polite"'));
+    assert.ok(html.includes('id="chatTextInput" class="form-control" placeholder="Share a feeling, memory, or shayari..." maxlength="1000"'));
+    assert.ok(html.includes("Live chat · Messages are shared with everyone"));
 });
 
 test("chat submit prevents duplicate posts while a save request is in progress", () => {
     const app = read("client/js/app.js");
 
-    assert.match(app, /if \\(!text \\|\\| \\(submitButton && submitButton\.disabled\\)\\) return/);
-    assert.match(app, /submitButton\.disabled = true/);
-    assert.match(app, /submitButton\.disabled = false/);
-    assert.match(app, /Message could not be sent/);
+    assert.ok(app.includes('if (!text || (submitButton && submitButton.disabled)) return;'));
+    assert.ok(app.includes("submitButton.disabled = true"));
+    assert.ok(app.includes("submitButton.disabled = false"));
+    assert.ok(app.includes("Message could not be sent"));
 });
