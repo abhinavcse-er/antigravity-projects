@@ -97,7 +97,7 @@
 
         const personalRadioBtn = $("personalRadioButton");
         if (personalRadioBtn) {
-            personalRadioBtn.addEventListener("click", startPersonalRadio);
+            personalRadioBtn.addEventListener("click", () => startPersonalRadio(false));
         }
     }
 
@@ -334,7 +334,7 @@
         }
     }
 
-    async function startPersonalRadio() {
+    async function startPersonalRadio(silent = false) {
         const button = $("personalRadioButton");
         if (button?.disabled) return;
         if (button) button.disabled = true;
@@ -354,7 +354,11 @@
             });
 
             if (!songs.length) {
-                window.showMehfilToast("No playable recommendations yet. Try another mood or Search.");
+                if (silent && state.songs.length) {
+                    playSongAtIndex((state.currentIndex + 1) % state.songs.length, true);
+                } else if (!silent) {
+                    window.showMehfilToast("No playable recommendations yet. Try another mood or Search.");
+                }
                 return;
             }
 
@@ -366,14 +370,20 @@
             state.currentIndex = 0;
             playSongAtIndex(0, true);
 
-            const isPersonalized = !!result?.profile?.personalized;
-            window.showMehfilToast(isPersonalized
-                ? "Your Personal Radio is ready — tuned to your listening taste."
-                : "Your Personal Radio is ready — starting with your selected mood.");
+            if (!silent) {
+                const isPersonalized = !!result?.profile?.personalized;
+                window.showMehfilToast(isPersonalized
+                    ? "Your Personal Radio is ready — tuned to your listening taste."
+                    : "Your Personal Radio is ready — starting with your selected mood.");
+            }
         } catch (error) {
             if (requestVersion === personalRadioRequestVersion) {
                 console.error("[MEHFIL] Personal Radio failed:", error);
-                window.showMehfilToast("Personal Radio could not load. Please try again.");
+                if (silent && state.songs.length) {
+                    playSongAtIndex((state.currentIndex + 1) % state.songs.length, true);
+                } else if (!silent) {
+                    window.showMehfilToast("Personal Radio could not load. Please try again.");
+                }
             }
         } finally {
             if (button) button.disabled = false;
@@ -677,6 +687,10 @@
     window.onSongEnded = function () {
         if (state.isRepeat) {
             playSongAtIndex(state.currentIndex, true);
+        } else if (state.isPersonalRadio && !state.isShuffle &&
+            state.currentIndex >= state.songs.length - 1) {
+            // Build a fresh personal queue at the end of each radio set.
+            startPersonalRadio(true);
         } else if (state.isShuffle) {
             const rnd = Math.floor(Math.random() * state.songs.length);
             playSongAtIndex(rnd, true);
