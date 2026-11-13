@@ -150,7 +150,12 @@ router.get('/radio/personalized', (req, res) => {
   const mood = validMoods.has(req.query.mood) ? req.query.mood : 'love';
   const requestedLimit = Number(req.query.limit) || 20;
   const limit = Math.max(1, Math.min(30, Math.floor(requestedLimit)));
-  const songs = songService.getPersonalizedSongs(userId, mood, limit);
+  const recentSongIds = String(req.query.recent || '')
+    .split(',')
+    .map(Number)
+    .filter(id => Number.isInteger(id) && id > 0)
+    .slice(0, 12);
+  const songs = songService.getPersonalizedSongs(userId, mood, limit, recentSongIds);
   const hasHistory = db.getListeningHistory(userId, 1).length > 0;
   const hasFavorites = db.getFavorites(userId).length > 0;
 
