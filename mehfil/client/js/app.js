@@ -32,6 +32,7 @@
     // Helper: Select element
     const $ = (id) => document.getElementById(id);
     let moodLoadVersion = 0;
+    let personalRadioRequestVersion = 0;
 
     // Toast Notification
     window.showMehfilToast = function (text) {
@@ -283,6 +284,7 @@
     async function switchMood(mood, autoPlay = true) {
         if (!state.moodData[mood]) return;
         const requestVersion = ++moodLoadVersion;
+        personalRadioRequestVersion++;
         state.currentMood = mood;
         state.isRadioSyncMode = false;
         state.isPersonalRadio = false;
@@ -336,13 +338,16 @@
         const button = $("personalRadioButton");
         if (button?.disabled) return;
         if (button) button.disabled = true;
+        const requestVersion = ++personalRadioRequestVersion;
+        const requestedMood = state.currentMood;
 
         try {
             const result = await MehfilAPI.getPersonalRadio({
-                mood: state.currentMood,
+                mood: requestedMood,
                 limit: 20,
                 recentIds: state.recentSongs.map(song => song.id)
             });
+            if (requestVersion !== personalRadioRequestVersion || requestedMood !== state.currentMood) return;
             const songs = (Array.isArray(result?.songs) ? result.songs : []).filter(song => {
                 const ids = [song.youtubeId, song.backupId].filter(Boolean);
                 return ids.length && ids.some(id => !state.unavailableVideoIds.has(String(id)));
@@ -366,8 +371,10 @@
                 ? "Your Personal Radio is ready — tuned to your listening taste."
                 : "Your Personal Radio is ready — starting with your selected mood.");
         } catch (error) {
-            console.error("[MEHFIL] Personal Radio failed:", error);
-            window.showMehfilToast("Personal Radio could not load. Please try again.");
+            if (requestVersion === personalRadioRequestVersion) {
+                console.error("[MEHFIL] Personal Radio failed:", error);
+                window.showMehfilToast("Personal Radio could not load. Please try again.");
+            }
         } finally {
             if (button) button.disabled = false;
         }
@@ -384,6 +391,7 @@
     }
 
     async function handleSurpriseMe() {
+        personalRadioRequestVersion++;
         state.isPersonalRadio = false;
         updatePersonalRadioButtonUI();
         try {
@@ -731,6 +739,9 @@
         const badge = $("radioModeBadge");
         if (badge) {
             badge.addEventListener("click", async () => {
+                personalRadioRequestVersion++;
+                state.isPersonalRadio = false;
+                updatePersonalRadioButtonUI();
                 state.isRadioSyncMode = !state.isRadioSyncMode;
                 updateRadioBadgeUI();
 
