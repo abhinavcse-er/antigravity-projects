@@ -116,7 +116,7 @@ class SongService {
     if (userId) db.recordListening(userId, id, selectedMood);
   }
 
-  getPersonalizedSongs(userId, preferredMood = 'love', limit = 20) {
+  getPersonalizedSongs(userId, preferredMood = 'love', limit = 20, recentSongIds = []) {
     const safeLimit = Math.max(1, Math.min(30, Math.floor(Number(limit) || 20)));
     const mood = Object.prototype.hasOwnProperty.call(config.moods, preferredMood)
       ? preferredMood
@@ -147,6 +147,20 @@ class SongService {
           artistAffinity.set(playedSong.artist, (artistAffinity.get(playedSong.artist) || 0) + recencyWeight);
         }
       }
+    });
+
+    // The previous client release kept a short Recently Played list locally.
+    // Include those known catalogue IDs so the first radio queue still feels personal.
+    const localRecentIds = [...new Set((Array.isArray(recentSongIds) ? recentSongIds : [])
+      .map(Number)
+      .filter(id => Number.isInteger(id) && id > 0))].slice(0, 12);
+    localRecentIds.forEach((id, index) => {
+      recentIds.add(id);
+      const playedSong = catalogById.get(id);
+      if (!playedSong) return;
+      const weight = Math.max(0.5, 2.2 - index * 0.12);
+      moodAffinity.set(playedSong.mood, (moodAffinity.get(playedSong.mood) || 0) + weight);
+      artistAffinity.set(playedSong.artist, (artistAffinity.get(playedSong.artist) || 0) + weight);
     });
 
     const ranked = catalog.map(song => {
