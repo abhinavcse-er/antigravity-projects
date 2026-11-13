@@ -512,6 +512,7 @@
         }
 
         renderRecentList();
+        renderLibraryRecent();
     }
 
     function renderRecentList() {
@@ -680,6 +681,7 @@
             console.warn("[MEHFIL] Could not update recently played storage:", error);
         }
         renderRecentList();
+        renderLibraryRecent();
 
         window.showMehfilToast("Skipping unavailable track: " + (song?.title || "Unknown song"));
         if (state.songs.length) {
@@ -1150,6 +1152,15 @@
     async function loadMusicLibrary() {
         activePlaylistId = null;
         activePlaylist = null;
+        playlistSearchVersion++;
+        clearTimeout(playlistSearchTimer);
+        const searchInput = $("playlistSongSearchInput");
+        const searchResults = $("playlistSongSearchResults");
+        if (searchInput) searchInput.value = "";
+        if (searchResults) {
+            searchResults.hidden = true;
+            searchResults.innerHTML = "";
+        }
         const detail = $("playlistDetail");
         if (detail) detail.hidden = true;
         renderLibraryRecent();
@@ -1203,6 +1214,12 @@
     }
 
     async function openPlaylistDetail(playlistId) {
+        playlistSearchVersion++;
+        const searchResults = $("playlistSongSearchResults");
+        if (searchResults) {
+            searchResults.hidden = true;
+            searchResults.innerHTML = "";
+        }
         const detail = $("playlistDetail");
         const songsEl = $("playlistSongsList");
         const titleEl = $("playlistDetailTitle");
@@ -1512,8 +1529,14 @@
         const closeDetail = $("closePlaylistDetailButton");
         if (closeDetail) {
             closeDetail.addEventListener("click", () => {
+                playlistSearchVersion++;
                 activePlaylist = null;
                 activePlaylistId = null;
+                const searchResults = $("playlistSongSearchResults");
+                if (searchResults) {
+                    searchResults.hidden = true;
+                    searchResults.innerHTML = "";
+                }
                 const detail = $("playlistDetail");
                 if (detail) detail.hidden = true;
             });
