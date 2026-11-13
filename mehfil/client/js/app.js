@@ -314,6 +314,10 @@
                 state.songs = playableCandidates;
                 state.currentIndex = 0;
                 playSongAtIndex(0, autoPlay);
+            } else {
+                state.songs = [];
+                state.currentIndex = 0;
+                window.showMehfilToast("No known playable tracks in this mood yet. Try Search or another mood.");
             }
         } catch (err) {
             console.error("[MEHFIL] Error loading mood songs:", err);
