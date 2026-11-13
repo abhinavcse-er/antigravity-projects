@@ -395,6 +395,10 @@
         if (!button) return;
         button.setAttribute("aria-pressed", String(state.isPersonalRadio));
         button.classList.toggle("personal-radio-active", state.isPersonalRadio);
+        const title = button.querySelector("strong");
+        const subtitle = button.querySelector("small");
+        if (title) title.textContent = state.isPersonalRadio ? "Your Personal Radio" : "Personal Radio";
+        if (subtitle) subtitle.textContent = state.isPersonalRadio ? "Tuned to your taste" : "Made for your mood";
         button.title = state.isPersonalRadio
             ? "Your personalized radio queue is active"
             : "Create a radio queue from your mood and listening history";
@@ -486,9 +490,6 @@
 
         // Update Favorite Button State
         updateFavoriteButtonUI(song.id);
-
-        // Add to Recently Played
-        addToRecent(song);
 
         // Send to Audio Player
         MehfilAudioPlayer.loadSong(song, autoPlay, seekSeconds);
@@ -645,6 +646,7 @@
     // when a track is selected or an unavailable video is queued.
     window.onSongPlaybackStarted = function (song) {
         if (!song) return;
+        addToRecent(song);
         MehfilAPI.recordPlay(song.id, song.mood || state.currentMood).catch(error => {
             console.warn("[MEHFIL] Listening history could not be saved:", error);
         });
