@@ -13,6 +13,7 @@
         currentIndex: 0,
         currentSong: null,
         isRadioSyncMode: false,
+        isPersonalRadio: false,
         isShuffle: false,
         isRepeat: false,
         recentSongs: (() => { try { const saved = JSON.parse(localStorage.getItem('mehfil_recent_songs') || '[]'); return Array.isArray(saved) ? saved.slice(0, 6) : []; } catch { return []; } })(),
@@ -91,6 +92,11 @@
         const surpriseBtn = $("surpriseButton");
         if (surpriseBtn) {
             surpriseBtn.addEventListener("click", handleSurpriseMe);
+        }
+
+        const personalRadioBtn = $("personalRadioButton");
+        if (personalRadioBtn) {
+            personalRadioBtn.addEventListener("click", startPersonalRadio);
         }
     }
 
@@ -279,7 +285,9 @@
         const requestVersion = ++moodLoadVersion;
         state.currentMood = mood;
         state.isRadioSyncMode = false;
+        state.isPersonalRadio = false;
         updateRadioBadgeUI();
+        updatePersonalRadioButtonUI();
 
         // Update body class for ambient color glow
         document.body.className = `mood-${mood}`;
@@ -324,7 +332,59 @@
         }
     }
 
+    async function startPersonalRadio() {
+        const button = $("personalRadioButton");
+        if (button?.disabled) return;
+        if (button) button.disabled = true;
+
+        try {
+            const result = await MehfilAPI.getPersonalRadio({
+                mood: state.currentMood,
+                limit: 20
+            });
+            const songs = (Array.isArray(result?.songs) ? result.songs : []).filter(song => {
+                const ids = [song.youtubeId, song.backupId].filter(Boolean);
+                return ids.length && ids.some(id => !state.unavailableVideoIds.has(String(id)));
+            });
+
+            if (!songs.length) {
+                window.showMehfilToast("No playable recommendations yet. Try another mood or Search.");
+                return;
+            }
+
+            state.isRadioSyncMode = false;
+            state.isPersonalRadio = true;
+            updateRadioBadgeUI();
+            updatePersonalRadioButtonUI();
+            state.songs = songs;
+            state.currentIndex = 0;
+            playSongAtIndex(0, true);
+
+            const isPersonalized = !!result?.profile?.personalized;
+            window.showMehfilToast(isPersonalized
+                ? "Your Personal Radio is ready — tuned to your listening taste."
+                : "Your Personal Radio is ready — starting with your selected mood.");
+        } catch (error) {
+            console.error("[MEHFIL] Personal Radio failed:", error);
+            window.showMehfilToast("Personal Radio could not load. Please try again.");
+        } finally {
+            if (button) button.disabled = false;
+        }
+    }
+
+    function updatePersonalRadioButtonUI() {
+        const button = $("personalRadioButton");
+        if (!button) return;
+        button.setAttribute("aria-pressed", String(state.isPersonalRadio));
+        button.classList.toggle("personal-radio-active", state.isPersonalRadio);
+        button.title = state.isPersonalRadio
+            ? "Your personalized radio queue is active"
+            : "Create a radio queue from your mood and listening history";
+    }
+
     async function handleSurpriseMe() {
+        state.isPersonalRadio = false;
+        updatePersonalRadioButtonUI();
         try {
             const randomSong = await MehfilAPI.getRandomSong();
             if (randomSong) {
@@ -407,9 +467,6 @@
 
         // Update Favorite Button State
         updateFavoriteButtonUI(song.id);
-
-        // Record play on backend
-        MehfilAPI.recordPlay(song.id).catch(() => {});
 
         // Add to Recently Played
         addToRecent(song);
@@ -564,6 +621,15 @@
         else if (vol < 40) icon.classList.add("fa-volume-low");
         else icon.classList.add("fa-volume-high");
     }
+
+    // Record only after the YouTube player confirms real playback, not merely
+    // when a track is selected or an unavailable video is queued.
+    window.onSongPlaybackStarted = function (song) {
+        if (!song) return;
+        MehfilAPI.recordPlay(song.id, song.mood || state.currentMood).catch(error => {
+            console.warn("[MEHFIL] Listening history could not be saved:", error);
+        });
+    };
 
     // Remove a track only after both its primary and backup YouTube
     // sources have failed. Remember rejected IDs so future mood loads hide it.
