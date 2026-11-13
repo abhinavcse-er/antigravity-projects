@@ -4,7 +4,10 @@
 (function () {
     "use strict";
 
-    const installButton = document.getElementById("installAppButton");
+    const installButtons = Array.from(document.querySelectorAll("[data-pwa-install]"));
+    const setInstallButtonsVisible = visible => {
+        installButtons.forEach(button => { button.hidden = !visible; });
+    };
     const mobileMenu = document.getElementById("mobileMenu");
     const menuButton = document.getElementById("menuButton");
     let deferredInstallPrompt = null;
@@ -30,12 +33,12 @@
         if (menuButton) menuButton.setAttribute("aria-expanded", "false");
     };
 
-    if (installButton) {
-        if (isIOS() && !isStandalone()) {
-            // iOS does not expose beforeinstallprompt; guide users to Safari's Share menu.
-            installButton.hidden = false;
-        }
+    if (isIOS() && !isStandalone()) {
+        // iOS does not expose beforeinstallprompt; guide users to Safari's Share menu.
+        setInstallButtonsVisible(true);
+    }
 
+    installButtons.forEach(installButton => {
         installButton.addEventListener("click", async () => {
             closeMobileMenu();
 
@@ -46,7 +49,7 @@
                     await promptEvent.prompt();
                     const choice = await promptEvent.userChoice;
                     if (choice && choice.outcome === "accepted") {
-                        installButton.hidden = true;
+                        setInstallButtonsVisible(false);
                     }
                 } catch (error) {
                     console.warn("[MEHFIL PWA] Install prompt failed:", error);
@@ -61,17 +64,17 @@
                 toast("Open your browser menu and choose Install MEHFIL or Add to Home Screen.");
             }
         });
-    }
+    });
 
     window.addEventListener("beforeinstallprompt", event => {
         event.preventDefault();
         deferredInstallPrompt = event;
-        if (installButton && !isStandalone()) installButton.hidden = false;
+        if (!isStandalone()) setInstallButtonsVisible(true);
     });
 
     window.addEventListener("appinstalled", () => {
         deferredInstallPrompt = null;
-        if (installButton) installButton.hidden = true;
+        setInstallButtonsVisible(false);
         toast("MEHFIL installed successfully. Welcome to your music lounge!");
     });
 

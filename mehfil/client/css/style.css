@@ -7540,3 +7540,32 @@ body.mood-late-night { --accent: #a58aff; --accent-2: #5869cf; }
 .mobile-menu .pwa-install-button[hidden] {
     display: none !important;
 }
+
+
+/* Desktop install action. Smaller screens use the existing mobile menu action. */
+.pwa-header-install {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    flex: 0 0 auto;
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid rgba(243, 107, 156, .34);
+    border-radius: 999px;
+    color: #ffe5f0;
+    background: rgba(243, 107, 156, .10);
+    font: 700 12px "DM Sans", sans-serif;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.pwa-header-install i { color: var(--accent); }
+.pwa-header-install:hover {
+    border-color: var(--accent);
+    background: rgba(243, 107, 156, .18);
+    transform: translateY(-1px);
+}
+.pwa-header-install[hidden] { display: none !important; }
+@media (max-width: 1240px) {
+    .pwa-header-install { display: none !important; }
+}
