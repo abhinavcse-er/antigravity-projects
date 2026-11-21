@@ -33,17 +33,17 @@ test("empty and non-string messages are rejected", () => {
     assert.equal(community.normalizeCommunityMessage({ text: 123 }), null);
 });
 
-test("HTTP and Socket.IO message paths both persist before broadcasting", () => {
+test("HTTP and Socket.IO message paths persist owner-scoped messages before broadcasting", () => {
     const routes = read("server/routes/api.js");
     const sockets = read("server/sockets/socketHandler.js");
 
     assert.ok(routes.includes("communityService.normalizeCommunityMessage"));
-    assert.ok(routes.includes("db.addCommunityMessage(message)"));
-    assert.ok(routes.includes("io.emit('community:message', newMsg)"));
+    assert.ok(routes.includes("db.addCommunityMessage({ ...message, ownerId })"));
+    assert.ok(routes.includes("io.emit('community:message', publicCommunityMessage(newMsg, null))"));
 
     assert.ok(sockets.includes("communityService.normalizeCommunityMessage"));
-    assert.ok(sockets.includes("db.addCommunityMessage(message)"));
-    assert.ok(sockets.includes("io.emit('community:message', newMsg)"));
+    assert.ok(sockets.includes("db.addCommunityMessage({ ...message, ownerId })"));
+    assert.ok(sockets.includes("io.emit('community:message', publicMessage)"));
 });
 
 test("community history is not cached and is refreshed after Socket.IO reconnect", () => {
@@ -52,10 +52,12 @@ test("community history is not cached and is refreshed after Socket.IO reconnect
     const sockets = read("client/js/socket.js");
 
     assert.ok(routes.includes("router.get('/community'"));
-    assert.ok(routes.includes("res.setHeader('Cache-Control', 'no-store')"));
+    assert.ok(routes.includes("res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private')"));
     assert.ok(api.includes('if (endpoint.startsWith("/community")) return 0;'));
     assert.ok(sockets.includes('socket.on("community:message"'));
     assert.ok(sockets.includes("window.onCommunitySocketReconnected"));
+    assert.ok(read("client/js/app.js").includes("}, 3000)"));
+    assert.ok(read("client/js/app.js").includes("startCommunityPolling"));
 });
 
 test("community likes are persisted and broadcast to every connected listener", () => {
@@ -63,8 +65,8 @@ test("community likes are persisted and broadcast to every connected listener", 
     const sockets = read("client/js/socket.js");
     const app = read("client/js/app.js");
 
-    assert.ok(routes.includes("db.likeCommunityMessage(req.params.id)"));
-    assert.ok(routes.includes("req.app.get('io').emit('community:like', updated)"));
+    assert.ok(routes.includes("db.likeCommunityMessage(id)"));
+    assert.ok(routes.includes("req.app.get('io').emit('community:like', publicMessage)"));
     assert.ok(sockets.includes('socket.on("community:like"'));
     assert.ok(app.includes("window.onCommunityLikeReceived = function"));
     assert.ok(app.includes("updateCommunityLikeCount(updated)"));
@@ -93,8 +95,37 @@ test("Baithak stream is accessible and the composer caps comments at 1000 charac
 test("chat submit prevents duplicate posts while a save request is in progress", () => {
     const app = read("client/js/app.js");
 
-    assert.ok(app.includes('if (!text || (submitButton && submitButton.disabled)) return;'));
+    assert.ok(app.includes('if (!text || !userName || userName.length < 2 || (submitButton && submitButton.disabled)) {'));
     assert.ok(app.includes("submitButton.disabled = true"));
     assert.ok(app.includes("submitButton.disabled = false"));
     assert.ok(app.includes("Message could not be sent"));
+});
+
+
+test("community messages can only be edited or deleted by their browser owner", () => {
+    const routes = read("server/routes/api.js");
+    const database = read("server/db/database.js");
+
+    assert.ok(routes.includes("router.patch('/community/:id'"));
+    assert.ok(routes.includes("router.delete('/community/:id'"));
+    assert.ok(routes.includes("db.editCommunityMessage(id, ownerId"));
+    assert.ok(routes.includes("db.deleteCommunityMessage(id, ownerId)"));
+    assert.ok(database.includes("WHERE id = ? AND ownerId = ?"));
+    assert.ok(database.includes("ownerId: ownerId || null"));
+});
+
+test("community name picker, edit/delete controls and live recovery are wired", () => {
+    const html = read("client/index.html");
+    const app = read("client/js/app.js");
+    const api = read("client/js/api.js");
+    const sockets = read("client/js/socket.js");
+
+    assert.ok(html.includes('id="communityUserNameInput"'));
+    assert.ok(app.includes("COMMUNITY_NAME_STORAGE_KEY"));
+    assert.ok(app.includes("MehfilAPI.editCommunityMessage"));
+    assert.ok(app.includes("MehfilAPI.deleteCommunityMessage"));
+    assert.ok(api.includes("editCommunityMessage:"));
+    assert.ok(api.includes("deleteCommunityMessage:"));
+    assert.ok(sockets.includes('socket.on("community:update"'));
+    assert.ok(sockets.includes('socket.on("community:delete"'));
 });
