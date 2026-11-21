@@ -127,9 +127,14 @@ const MehfilSocket = (function () {
             currentUser = data?.user || null;
             if (data?.stats) updateAudienceUI(data.stats);
 
-            const userBadgeEl = document.getElementById("myUserBadge");
-            if (userBadgeEl && currentUser) {
-                userBadgeEl.textContent = `${currentUser.avatar} ${currentUser.nickname}`;
+            const userNameInput = document.getElementById("communityUserNameInput");
+            if (userNameInput && currentUser) {
+                try {
+                    const savedName = localStorage.getItem("mehfil_community_name");
+                    if (!savedName && !userNameInput.value) userNameInput.value = currentUser.nickname || "Musafir";
+                } catch {
+                    if (!userNameInput.value) userNameInput.value = currentUser.nickname || "Musafir";
+                }
             }
         });
 
@@ -138,6 +143,18 @@ const MehfilSocket = (function () {
         socket.on("community:message", (msg) => {
             if (typeof window.onCommunityMessageReceived === "function") {
                 window.onCommunityMessageReceived(msg);
+            }
+        });
+
+        socket.on("community:update", (msg) => {
+            if (typeof window.onCommunityMessageUpdated === "function") {
+                window.onCommunityMessageUpdated(msg);
+            }
+        });
+
+        socket.on("community:delete", (payload) => {
+            if (typeof window.onCommunityMessageDeleted === "function") {
+                window.onCommunityMessageDeleted(payload);
             }
         });
 
