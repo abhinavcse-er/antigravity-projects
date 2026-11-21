@@ -626,16 +626,15 @@
                     <div class="community-messages-stream" id="communityMessagesStream" role="log" aria-live="polite" aria-relevant="additions" aria-label="Live community messages"></div>
 
                     <form class="chat-input-row" id="communityChatForm">
+                        <label class="community-name-label" for="communityUserNameInput">Your community name</label>
+                        <input type="text" id="communityUserNameInput" class="form-control community-name-input" placeholder="Choose a display name..." maxlength="32" minlength="2" autocomplete="nickname" required>
                         <input type="text" id="chatTextInput" class="form-control" placeholder="Share a feeling, memory, or shayari..." maxlength="1000" required autocomplete="off">
                         <div class="chat-controls-sub">
                             <label class="shayari-toggle">
                                 <input type="checkbox" id="isShayariCheckbox">
                                 <span>Tag as Shayari / Poetry</span>
                             </label>
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span id="myUserBadge" style="font-size:0.8rem; color:var(--muted);"></span>
-                                <button type="submit" class="send-msg-btn">Post <i class="fa-solid fa-paper-plane"></i></button>
-                            </div>
+                            <button type="submit" class="send-msg-btn">Post <i class="fa-solid fa-paper-plane"></i></button>
                         </div>
                     </form>
                 </div>
