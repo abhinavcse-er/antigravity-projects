@@ -57,9 +57,14 @@ function setupSockets(io) {
       });
       if (!message) return;
 
+      const ownerId = String(socket.handshake.auth?.userId || '').trim();
+      if (!/^[a-zA-Z0-9_-]{6,100}$/.test(ownerId)) return;
       try {
-        const newMsg = db.addCommunityMessage(message);
-        if (newMsg) io.emit('community:message', newMsg);
+        const newMsg = db.addCommunityMessage({ ...message, ownerId });
+        if (newMsg) {
+          const { ownerId: privateOwnerId, ...publicMessage } = newMsg;
+          io.emit('community:message', publicMessage);
+        }
       } catch (error) {
         console.error('[COMMUNITY] Socket message could not be saved:', error);
       }

@@ -217,42 +217,112 @@ router.post('/requests/:id/vote', writeLimiter, (req, res) => {
   res.json(updated);
 });
 
-// GET /api/community
-// Community chat is a shared live feed; never serve a cached snapshot.
+// Community messages are returned with a per-request ownership flag.
+// The private owner ID is never exposed in public chat payloads.
+function publicCommunityMessage(message, requesterId) {
+  if (!message) return null;
+  const { ownerId, ...publicMessage } = message;
+  return { ...publicMessage, isMine: Boolean(requesterId && ownerId && ownerId === requesterId) };
+}
+
+function communityRequesterId(req, res) {
+  const userId = String(req.headers['x-user-id'] || '').trim();
+  if (!validClientId(userId)) {
+    res.status(401).json({ error: 'A valid MEHFIL browser identity is required' });
+    return null;
+  }
+  return userId;
+}
+
+function validCommunityMessageId(value) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+// GET /api/community — always fresh; polling is the recovery path for missed socket events.
 router.get('/community', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  res.json(db.getCommunityMessages(40));
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  const requesterId = validClientId(req.headers['x-user-id']) ? String(req.headers['x-user-id']) : null;
+  res.json(db.getCommunityMessages(40).map(message => publicCommunityMessage(message, requesterId)));
 });
 
 // POST /api/community
-// Persist first, then broadcast the same database row to every connected listener.
 router.post('/community', writeLimiter, (req, res) => {
+  const ownerId = communityRequesterId(req, res);
+  if (!ownerId) return;
   const message = communityService.normalizeCommunityMessage(req.body || {});
-  if (!message) {
-    return res.status(400).json({ error: 'Message text cannot be empty' });
-  }
+  if (!message) return res.status(400).json({ error: 'Message text cannot be empty' });
 
   try {
-    const newMsg = db.addCommunityMessage(message);
+    const newMsg = db.addCommunityMessage({ ...message, ownerId });
     const io = req.app.get('io');
-    if (io && newMsg) io.emit('community:message', newMsg);
-    return res.status(201).json(newMsg);
+    if (io && newMsg) io.emit('community:message', publicCommunityMessage(newMsg, null));
+    return res.status(201).json(publicCommunityMessage(newMsg, ownerId));
   } catch (error) {
     console.error('[COMMUNITY] Could not save message:', error);
     return res.status(500).json({ error: 'Message could not be saved. Please try again.' });
   }
 });
 
+// PATCH /api/community/:id — only the browser identity that created a message can edit it.
+router.patch('/community/:id', writeLimiter, (req, res) => {
+  const ownerId = communityRequesterId(req, res);
+  if (!ownerId) return;
+  const id = validCommunityMessageId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid message ID' });
+  const normalized = communityService.normalizeCommunityMessage({
+    text: req.body?.text,
+    isShayari: req.body?.isShayari
+  });
+  if (!normalized) return res.status(400).json({ error: 'Message text cannot be empty' });
+
+  try {
+    const updated = db.editCommunityMessage(id, ownerId, {
+      text: normalized.text,
+      isShayari: normalized.isShayari
+    });
+    if (!updated) return res.status(404).json({ error: 'Message not found or you do not own it' });
+    const publicMessage = publicCommunityMessage(updated, null);
+    const io = req.app.get('io');
+    if (io) io.emit('community:update', publicMessage);
+    return res.json(publicCommunityMessage(updated, ownerId));
+  } catch (error) {
+    console.error('[COMMUNITY] Could not edit message:', error);
+    return res.status(500).json({ error: 'Message could not be edited. Please try again.' });
+  }
+});
+
+// DELETE /api/community/:id — owner-only deletion.
+router.delete('/community/:id', writeLimiter, (req, res) => {
+  const ownerId = communityRequesterId(req, res);
+  if (!ownerId) return;
+  const id = validCommunityMessageId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid message ID' });
+
+  try {
+    const deleted = db.deleteCommunityMessage(id, ownerId);
+    if (!deleted) return res.status(404).json({ error: 'Message not found or you do not own it' });
+    const io = req.app.get('io');
+    if (io) io.emit('community:delete', { id });
+    return res.json({ success: true, id });
+  } catch (error) {
+    console.error('[COMMUNITY] Could not delete message:', error);
+    return res.status(500).json({ error: 'Message could not be deleted. Please try again.' });
+  }
+});
+
 // POST /api/community/:id/like
 router.post('/community/:id/like', writeLimiter, (req, res) => {
-  const updated = db.likeCommunityMessage(req.params.id);
+  const id = validCommunityMessageId(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid message ID' });
+  const updated = db.likeCommunityMessage(id);
   if (!updated) return res.status(404).json({ error: 'Message not found' });
 
-  if (req.app.get('io')) {
-    req.app.get('io').emit('community:like', updated);
-  }
-
-  res.json(updated);
+  const publicMessage = publicCommunityMessage(updated, null);
+  if (req.app.get('io')) req.app.get('io').emit('community:like', publicMessage);
+  const requesterId = validClientId(req.headers['x-user-id']) ? String(req.headers['x-user-id']) : null;
+  res.json(publicCommunityMessage(updated, requesterId));
 });
 
 // Personal music library — every playlist is scoped to the requesting client ID.

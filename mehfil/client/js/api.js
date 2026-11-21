@@ -138,6 +138,11 @@ const MehfilAPI = (function () {
         voteRequest: (id) => request(`/requests/${encodeURIComponent(id)}/vote`, { method: "POST" }),
         getCommunityMessages: () => request("/community"),
         postCommunityMessage: (data) => request("/community", { method: "POST", body: JSON.stringify(data) }),
+        editCommunityMessage: (id, data) => request(`/community/${encodeURIComponent(id)}`, {
+            method: "PATCH",
+            body: JSON.stringify(data)
+        }),
+        deleteCommunityMessage: (id) => request(`/community/${encodeURIComponent(id)}`, { method: "DELETE" }),
         likeCommunityMessage: (id) => request(`/community/${encodeURIComponent(id)}/like`, { method: "POST" }),
         getFavorites: () => request("/favorites"),
         toggleFavorite: (songId) => request("/favorites", {

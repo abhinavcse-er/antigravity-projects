@@ -100,7 +100,9 @@ function setupSqliteSchema() {
       text TEXT NOT NULL,
       isShayari INTEGER DEFAULT 0,
       likes INTEGER DEFAULT 0,
-      timestamp INTEGER NOT NULL
+      timestamp INTEGER NOT NULL,
+      ownerId TEXT,
+      editedAt INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS favorites (
@@ -148,6 +150,13 @@ function setupSqliteSchema() {
     CREATE INDEX IF NOT EXISTS idx_playlists_user_updated ON playlists(userId, updatedAt DESC);
     CREATE INDEX IF NOT EXISTS idx_playlist_songs_position ON playlist_songs(playlistId, position);
   `);
+
+  // Additive migration keeps existing Render/SQLite data intact.
+  const communityColumns = new Set(
+    db.prepare('PRAGMA table_info(community_messages)').all().map(column => column.name)
+  );
+  if (!communityColumns.has('ownerId')) db.exec('ALTER TABLE community_messages ADD COLUMN ownerId TEXT');
+  if (!communityColumns.has('editedAt')) db.exec('ALTER TABLE community_messages ADD COLUMN editedAt INTEGER');
 
   // Check if songs exist
   const countStmt = db.prepare('SELECT COUNT(*) as count FROM songs');
@@ -229,6 +238,14 @@ function setupJsonStore() {
       memoryStore.playlist_songs = [];
       migrated = true;
     }
+    if (!Array.isArray(memoryStore.community_messages)) {
+      memoryStore.community_messages = [];
+      migrated = true;
+    }
+    memoryStore.community_messages.forEach(message => {
+      if (message.ownerId === undefined) { message.ownerId = null; migrated = true; }
+      if (message.editedAt === undefined) { message.editedAt = null; migrated = true; }
+    });
     if (migrated) persistJsonStore();
   }
 }
@@ -430,12 +447,12 @@ const dbApi = {
     }
   },
 
-  addCommunityMessage: ({ userName, userAvatar, mood, text, isShayari }) => {
+  addCommunityMessage: ({ userName, userAvatar, mood, text, isShayari, ownerId }) => {
     const timestamp = Date.now();
     if (isNativeSqlite) {
       const stmt = db.prepare(`
-        INSERT INTO community_messages (userName, userAvatar, mood, text, isShayari, likes, timestamp)
-        VALUES (?, ?, ?, ?, ?, 0, ?)
+        INSERT INTO community_messages (userName, userAvatar, mood, text, isShayari, likes, timestamp, ownerId)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?)
       `);
       const info = stmt.run(
         userName || 'Musafir',
@@ -443,24 +460,55 @@ const dbApi = {
         mood || 'love',
         text,
         isShayari ? 1 : 0,
-        timestamp
+        timestamp,
+        ownerId || null
       );
       return db.prepare('SELECT * FROM community_messages WHERE id = ?').get(info.lastInsertRowid);
     } else {
       const newMsg = {
-        id: memoryStore.community_messages.length + 1,
+        id: memoryStore.community_messages.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1,
         userName: userName || 'Musafir',
         userAvatar: userAvatar || '🎶',
         mood: mood || 'love',
         text,
         isShayari: !!isShayari,
         likes: 0,
-        timestamp
+        timestamp,
+        ownerId: ownerId || null,
+        editedAt: null
       };
       memoryStore.community_messages.push(newMsg);
       persistJsonStore();
       return newMsg;
     }
+  },
+
+  editCommunityMessage: (id, ownerId, { text, isShayari }) => {
+    const editedAt = Date.now();
+    if (isNativeSqlite) {
+      const result = db.prepare(
+        'UPDATE community_messages SET text = ?, isShayari = ?, editedAt = ? WHERE id = ? AND ownerId = ?'
+      ).run(text, isShayari ? 1 : 0, editedAt, id, ownerId);
+      return result.changes ? db.prepare('SELECT * FROM community_messages WHERE id = ?').get(id) : null;
+    }
+    const message = memoryStore.community_messages.find(item => Number(item.id) === Number(id) && item.ownerId === ownerId);
+    if (!message) return null;
+    message.text = text;
+    message.isShayari = !!isShayari;
+    message.editedAt = editedAt;
+    persistJsonStore();
+    return message;
+  },
+
+  deleteCommunityMessage: (id, ownerId) => {
+    if (isNativeSqlite) {
+      return db.prepare('DELETE FROM community_messages WHERE id = ? AND ownerId = ?').run(id, ownerId).changes > 0;
+    }
+    const index = memoryStore.community_messages.findIndex(item => Number(item.id) === Number(id) && item.ownerId === ownerId);
+    if (index < 0) return false;
+    memoryStore.community_messages.splice(index, 1);
+    persistJsonStore();
+    return true;
   },
 
   likeCommunityMessage: (id) => {

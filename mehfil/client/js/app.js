@@ -40,6 +40,9 @@
     let playlistSearchVersion = 0;
     const communityMessages = new Map();
     const COMMUNITY_MESSAGE_LIMIT = 40;
+    const COMMUNITY_NAME_STORAGE_KEY = "mehfil_community_name";
+    let communityPollTimer = null;
+    let communityPollInFlight = false;
 
     // Toast Notification
     window.showMehfilToast = function (text) {
@@ -824,7 +827,7 @@
         // Nav Links
         document.querySelectorAll("a[href='#explore']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("exploreModal"); loadExploreSongs(); }));
         document.querySelectorAll("a[href='#requests']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("requestsModal"); loadRequests(); }));
-        document.querySelectorAll("a[href='#community']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("communityModal"); loadCommunityMessages(); }));
+        document.querySelectorAll("a[href='#community']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("communityModal"); startCommunityPolling(); loadCommunityMessages(); }));
         document.querySelectorAll("a[href='#favorites']").forEach(el => el.addEventListener("click", (e) => { e.preventDefault(); openModal("favoritesModal"); loadMusicLibrary(); }));
         const viewAllRecent = $("viewAllRecent");
         if (viewAllRecent) {
@@ -908,20 +911,33 @@
         // Community Send Message Form — API saves first, then Socket.IO broadcasts to everyone.
         const chatForm = $("communityChatForm");
         if (chatForm) {
+            const nameInput = $("communityUserNameInput");
+            if (nameInput) {
+                try { nameInput.value = localStorage.getItem(COMMUNITY_NAME_STORAGE_KEY) || ""; } catch {}
+                nameInput.addEventListener("input", () => {
+                    try { localStorage.setItem(COMMUNITY_NAME_STORAGE_KEY, nameInput.value.slice(0, 32)); } catch {}
+                });
+            }
             chatForm.addEventListener("submit", async (e) => {
                 e.preventDefault();
                 const textInput = $("chatTextInput");
+                const nameInput = $("communityUserNameInput");
                 const submitButton = chatForm.querySelector(".send-msg-btn");
                 const text = textInput?.value?.trim() || "";
+                const userName = nameInput?.value?.trim().replace(/\s+/g, " ") || "";
                 const isShayari = $("isShayariCheckbox")?.checked || false;
 
-                if (!text || (submitButton && submitButton.disabled)) return;
+                if (!text || !userName || userName.length < 2 || (submitButton && submitButton.disabled)) {
+                    if (!userName && nameInput) nameInput.focus();
+                    return;
+                }
 
                 const user = MehfilSocket.getCurrentUser();
                 if (submitButton) submitButton.disabled = true;
                 try {
+                    localStorage.setItem(COMMUNITY_NAME_STORAGE_KEY, userName);
                     const savedMessage = await MehfilAPI.postCommunityMessage({
-                        userName: user?.nickname || "Musafir",
+                        userName,
                         userAvatar: user?.avatar || "🎶",
                         mood: state.currentMood,
                         text,
@@ -1101,23 +1117,36 @@
         if (btn) btn.textContent = updatedReq.votes;
     };
 
-    /* COMMUNITY CHAT DATA — shared database history + idempotent live updates */
-    async function loadCommunityMessages() {
+    /* COMMUNITY CHAT DATA — Socket.IO first, short polling recovers missed broadcasts. */
+    async function loadCommunityMessages(scrollToLatest = true) {
         const stream = $("communityMessagesStream");
-        if (!stream) return;
+        if (!stream || communityPollInFlight) return;
+        communityPollInFlight = true;
         try {
             const messages = await MehfilAPI.getCommunityMessages();
             (Array.isArray(messages) ? messages : []).forEach(rememberCommunityMessage);
-            renderCommunityMessages(true);
+            renderCommunityMessages(scrollToLatest);
         } catch (err) {
-            console.error("[MEHFIL] Could not load community history:", err);
+            console.error("[MEHFIL] Could not sync community history:", err);
             if (!communityMessages.size && !stream.childElementCount) {
                 const notice = document.createElement("div");
                 notice.className = "community-empty-state";
-                notice.textContent = "Unable to connect to the community. Please try again.";
+                notice.textContent = "Unable to connect to the community. Reconnecting automatically…";
                 stream.appendChild(notice);
             }
+        } finally {
+            communityPollInFlight = false;
         }
+    }
+
+    function startCommunityPolling() {
+        if (communityPollTimer) return;
+        communityPollTimer = window.setInterval(() => {
+            const modal = $("communityModal");
+            if (document.visibilityState === "visible" && modal?.classList.contains("active")) {
+                loadCommunityMessages(false);
+            }
+        }, 3000);
     }
 
     function rememberCommunityMessage(msg) {
@@ -1126,7 +1155,9 @@
 
         const key = String(id);
         const existing = communityMessages.get(key);
-        communityMessages.set(key, existing ? { ...existing, ...msg } : { ...msg });
+        const merged = existing ? { ...existing, ...msg } : { ...msg };
+        const changed = !existing || JSON.stringify(existing) !== JSON.stringify(merged);
+        communityMessages.set(key, merged);
 
         if (communityMessages.size > COMMUNITY_MESSAGE_LIMIT * 2) {
             const oldest = [...communityMessages.values()]
@@ -1134,7 +1165,7 @@
                 .slice(0, communityMessages.size - COMMUNITY_MESSAGE_LIMIT * 2);
             oldest.forEach(item => communityMessages.delete(String(item.id)));
         }
-        return !existing;
+        return changed;
     }
 
     function renderCommunityMessages(scrollToLatest = false) {
@@ -1175,7 +1206,7 @@
 
         const time = document.createElement("div");
         time.className = "chat-time";
-        time.textContent = formatTimeAgo(msg.timestamp);
+        time.textContent = formatTimeAgo(msg.timestamp) + (msg.editedAt ? " · edited" : "");
 
         userBadge.append(avatar, userName, mood);
         header.append(userBadge, time);
@@ -1213,16 +1244,75 @@
                 likeButton.disabled = false;
             }
         });
-
         actions.appendChild(likeButton);
+
+        if (msg.isMine) {
+            const ownerActions = document.createElement("div");
+            ownerActions.className = "chat-message-actions";
+
+            const editButton = document.createElement("button");
+            editButton.type = "button";
+            editButton.className = "chat-message-action";
+            editButton.textContent = "Edit";
+            editButton.setAttribute("aria-label", "Edit your message");
+            editButton.addEventListener("click", async () => {
+                const nextText = window.prompt("Edit your message:", msg.text || "");
+                if (nextText === null) return;
+                if (!nextText.trim()) {
+                    window.showMehfilToast("Message cannot be empty.");
+                    return;
+                }
+                editButton.disabled = true;
+                try {
+                    const updated = await MehfilAPI.editCommunityMessage(msg.id, {
+                        text: nextText.trim(),
+                        isShayari: Boolean(msg.isShayari)
+                    });
+                    appendCommunityMessage(updated, false);
+                    window.showMehfilToast("Message updated.");
+                } catch (error) {
+                    window.showMehfilToast(error.message || "Could not edit this message.");
+                } finally {
+                    editButton.disabled = false;
+                }
+            });
+
+            const deleteButton = document.createElement("button");
+            deleteButton.type = "button";
+            deleteButton.className = "chat-message-action delete";
+            deleteButton.textContent = "Delete";
+            deleteButton.setAttribute("aria-label", "Delete your message");
+            deleteButton.addEventListener("click", async () => {
+                if (!window.confirm("Delete this message for everyone?")) return;
+                deleteButton.disabled = true;
+                try {
+                    await MehfilAPI.deleteCommunityMessage(msg.id);
+                    communityMessages.delete(String(msg.id));
+                    renderCommunityMessages(false);
+                    window.showMehfilToast("Message deleted.");
+                } catch (error) {
+                    window.showMehfilToast(error.message || "Could not delete this message.");
+                    deleteButton.disabled = false;
+                }
+            });
+
+            ownerActions.append(editButton, deleteButton);
+            actions.appendChild(ownerActions);
+        }
+
         bubble.append(header, messageText, actions);
         return bubble;
     }
 
     function appendCommunityMessage(msg, scroll = true) {
         if (!msg || msg.id == null) return;
-        const isNew = rememberCommunityMessage(msg);
-        if (isNew) renderCommunityMessages(scroll);
+        const changed = rememberCommunityMessage(msg);
+        if (changed) renderCommunityMessages(scroll);
+    }
+
+    function removeCommunityMessage(id) {
+        communityMessages.delete(String(id));
+        renderCommunityMessages(false);
     }
 
     function updateCommunityLikeCount(msg) {
@@ -1250,13 +1340,21 @@
         appendCommunityMessage(msg, true);
     };
 
+    window.onCommunityMessageUpdated = function (msg) {
+        appendCommunityMessage(msg, false);
+    };
+
+    window.onCommunityMessageDeleted = function (payload) {
+        if (payload?.id != null) removeCommunityMessage(payload.id);
+    };
+
     window.onCommunityLikeReceived = function (msg) {
         updateCommunityLikeCount(msg);
     };
 
     window.onCommunitySocketReconnected = function () {
         const modal = $("communityModal");
-        if (modal?.classList.contains("active")) loadCommunityMessages();
+        if (modal?.classList.contains("active")) loadCommunityMessages(false);
     };
 
     function formatTimeAgo(ts) {
