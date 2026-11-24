@@ -322,13 +322,21 @@ router.delete('/community/:id', writeLimiter, async (req, res) => {
 router.post('/community/:id/like', writeLimiter, async (req, res) => {
   const id = validCommunityMessageId(req.params.id);
   if (!id) return res.status(400).json({ error: 'Invalid message ID' });
-  const updated = supabaseCommunity.enabled ? await supabaseCommunity.likeMessage(id) : db.likeCommunityMessage(id);
-  if (!updated) return res.status(404).json({ error: 'Message not found' });
 
-  const publicMessage = publicCommunityMessage(updated, null);
-  if (req.app.get('io')) req.app.get('io').emit('community:like', publicMessage);
-  const requesterId = validClientId(req.headers['x-user-id']) ? String(req.headers['x-user-id']) : null;
-  res.json(publicCommunityMessage(updated, requesterId));
+  try {
+    const updated = supabaseCommunity.enabled
+      ? await supabaseCommunity.likeMessage(id)
+      : db.likeCommunityMessage(id);
+    if (!updated) return res.status(404).json({ error: 'Message not found' });
+
+    const publicMessage = publicCommunityMessage(updated, null);
+    if (req.app.get('io')) req.app.get('io').emit('community:like', publicMessage);
+    const requesterId = validClientId(req.headers['x-user-id']) ? String(req.headers['x-user-id']) : null;
+    return res.json(publicCommunityMessage(updated, requesterId));
+  } catch (error) {
+    console.error('[COMMUNITY] Could not like message:', error);
+    return res.status(503).json({ error: 'Community is temporarily unavailable. Please try again.' });
+  }
 });
 
 // Personal music library — every playlist is scoped to the requesting client ID.
