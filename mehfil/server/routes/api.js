@@ -6,6 +6,7 @@ const songService = require('../services/songService');
 const presenceService = require('../services/presenceService');
 const radioService = require('../services/radioService');
 const communityService = require('../services/communityService');
+const supabaseCommunity = require('../services/supabaseCommunity');
 
 let presenceBroadcastTimer = null;
 
@@ -240,22 +241,28 @@ function validCommunityMessageId(value) {
 }
 
 // GET /api/community — always fresh; polling is the recovery path for missed socket events.
-router.get('/community', (req, res) => {
+router.get('/community', async (req, res) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.setHeader('Pragma', 'no-cache');
   const requesterId = validClientId(req.headers['x-user-id']) ? String(req.headers['x-user-id']) : null;
-  res.json(db.getCommunityMessages(40).map(message => publicCommunityMessage(message, requesterId)));
+  try {
+    const messages = supabaseCommunity.enabled ? await supabaseCommunity.getMessages(40) : db.getCommunityMessages(40);
+    res.json(messages.map(message => publicCommunityMessage(message, requesterId)));
+  } catch (error) {
+    console.error('[COMMUNITY] Could not load messages:', error);
+    res.status(503).json({ error: 'Community is temporarily unavailable. Please try again.' });
+  }
 });
 
 // POST /api/community
-router.post('/community', writeLimiter, (req, res) => {
+router.post('/community', writeLimiter, async (req, res) => {
   const ownerId = communityRequesterId(req, res);
   if (!ownerId) return;
   const message = communityService.normalizeCommunityMessage(req.body || {});
   if (!message) return res.status(400).json({ error: 'Message text cannot be empty' });
 
   try {
-    const newMsg = db.addCommunityMessage({ ...message, ownerId });
+    const newMsg = supabaseCommunity.enabled ? await supabaseCommunity.addMessage({ ...message, ownerId }) : db.addCommunityMessage({ ...message, ownerId });
     const io = req.app.get('io');
     if (io && newMsg) io.emit('community:message', publicCommunityMessage(newMsg, null));
     return res.status(201).json(publicCommunityMessage(newMsg, ownerId));
@@ -266,7 +273,7 @@ router.post('/community', writeLimiter, (req, res) => {
 });
 
 // PATCH /api/community/:id — only the browser identity that created a message can edit it.
-router.patch('/community/:id', writeLimiter, (req, res) => {
+router.patch('/community/:id', writeLimiter, async (req, res) => {
   const ownerId = communityRequesterId(req, res);
   if (!ownerId) return;
   const id = validCommunityMessageId(req.params.id);
@@ -278,10 +285,9 @@ router.patch('/community/:id', writeLimiter, (req, res) => {
   if (!normalized) return res.status(400).json({ error: 'Message text cannot be empty' });
 
   try {
-    const updated = db.editCommunityMessage(id, ownerId, {
-      text: normalized.text,
-      isShayari: normalized.isShayari
-    });
+    const updated = supabaseCommunity.enabled
+      ? await supabaseCommunity.editMessage(id, ownerId, { text: normalized.text, isShayari: normalized.isShayari })
+      : db.editCommunityMessage(id, ownerId, { text: normalized.text, isShayari: normalized.isShayari });
     if (!updated) return res.status(404).json({ error: 'Message not found or you do not own it' });
     const publicMessage = publicCommunityMessage(updated, null);
     const io = req.app.get('io');
@@ -294,14 +300,14 @@ router.patch('/community/:id', writeLimiter, (req, res) => {
 });
 
 // DELETE /api/community/:id — owner-only deletion.
-router.delete('/community/:id', writeLimiter, (req, res) => {
+router.delete('/community/:id', writeLimiter, async (req, res) => {
   const ownerId = communityRequesterId(req, res);
   if (!ownerId) return;
   const id = validCommunityMessageId(req.params.id);
   if (!id) return res.status(400).json({ error: 'Invalid message ID' });
 
   try {
-    const deleted = db.deleteCommunityMessage(id, ownerId);
+    const deleted = supabaseCommunity.enabled ? await supabaseCommunity.deleteMessage(id, ownerId) : db.deleteCommunityMessage(id, ownerId);
     if (!deleted) return res.status(404).json({ error: 'Message not found or you do not own it' });
     const io = req.app.get('io');
     if (io) io.emit('community:delete', { id });
@@ -313,10 +319,10 @@ router.delete('/community/:id', writeLimiter, (req, res) => {
 });
 
 // POST /api/community/:id/like
-router.post('/community/:id/like', writeLimiter, (req, res) => {
+router.post('/community/:id/like', writeLimiter, async (req, res) => {
   const id = validCommunityMessageId(req.params.id);
   if (!id) return res.status(400).json({ error: 'Invalid message ID' });
-  const updated = db.likeCommunityMessage(id);
+  const updated = supabaseCommunity.enabled ? await supabaseCommunity.likeMessage(id) : db.likeCommunityMessage(id);
   if (!updated) return res.status(404).json({ error: 'Message not found' });
 
   const publicMessage = publicCommunityMessage(updated, null);
