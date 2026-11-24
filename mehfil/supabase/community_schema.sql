@@ -25,3 +25,19 @@ alter table public.community_messages enable row level security;
 
 -- Intentionally no anon/authenticated policies. Server-side service_role
 -- access bypasses RLS; do not put that key in client-side code.
+
+-- Atomic likes prevent lost increments under concurrent requests.
+create or replace function public.like_community_message(message_id bigint)
+returns setof public.community_messages
+language sql
+security invoker
+set search_path = public
+as $$
+  update public.community_messages
+  set likes = likes + 1
+  where id = message_id
+  returning *;
+$$;
+
+revoke all on function public.like_community_message(bigint) from public, anon, authenticated;
+grant execute on function public.like_community_message(bigint) to service_role;
