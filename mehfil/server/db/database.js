@@ -63,6 +63,36 @@ function initDatabase() {
   }
 }
 
+function reconcileSeedSongSources() {
+  // Keep existing persistent databases in sync with the curated source IDs.
+  // Match by title + artist so user-created rows are not touched.
+  if (isNativeSqlite && db) {
+    const update = db.prepare(
+      'UPDATE songs SET backupId = ? WHERE title = ? AND artist = ? AND COALESCE(backupId, \'\') <> ?'
+    );
+    for (const song of seedSongs) {
+      const backupId = song.backupId || '';
+      update.run(backupId, song.title, song.artist, backupId);
+    }
+    return;
+  }
+
+  if (!memoryStore || !Array.isArray(memoryStore.songs)) return;
+  let changed = false;
+  for (const song of seedSongs) {
+    const existing = memoryStore.songs.find(item =>
+      item.title === song.title && item.artist === song.artist
+    );
+    if (!existing) continue;
+    const backupId = song.backupId || '';
+    if ((existing.backupId || '') !== backupId) {
+      existing.backupId = backupId;
+      changed = true;
+    }
+  }
+  if (changed) persistJsonStore();
+}
+
 function setupSqliteSchema() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS songs (
@@ -201,6 +231,7 @@ function setupSqliteSchema() {
     }
     console.log('[DB] Seed completed successfully!');
   }
+  reconcileSeedSongSources();
 }
 
 // Fallback JSON store
@@ -248,6 +279,7 @@ function setupJsonStore() {
     });
     if (migrated) persistJsonStore();
   }
+  reconcileSeedSongSources();
 }
 
 function persistJsonStore() {

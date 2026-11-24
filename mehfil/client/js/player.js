@@ -66,7 +66,10 @@ const MehfilAudioPlayer = (function () {
             events: {
                 onReady: onPlayerReady,
                 onStateChange: onPlayerStateChange,
-                onError: onPlayerError
+                onError: onPlayerError,
+                // Mobile browsers may reject playback even after a user gesture.
+                // Keep the UI truthful and ask for an explicit second tap.
+                onAutoplayBlocked: onAutoplayBlocked
             }
         });
     }
@@ -118,6 +121,15 @@ const MehfilAudioPlayer = (function () {
             if (typeof window.onSongEnded === "function" && endedGeneration === loadGeneration) {
                 window.onSongEnded();
             }
+        }
+    }
+
+    function onAutoplayBlocked() {
+        isPlaying = false;
+        stopProgressLoop();
+        updatePlayPauseUI(false);
+        if (typeof window.showMehfilToast === "function") {
+            window.showMehfilToast("Playback was blocked by your browser. Tap Play to start the song.");
         }
     }
 
@@ -195,9 +207,11 @@ const MehfilAudioPlayer = (function () {
                     videoId: vidId,
                     startSeconds: seekSeconds || 0
                 });
-                isPlaying = true;
-                updatePlayPauseUI(true);
-                startProgressLoop();
+                // Do not show a playing state until YouTube confirms PLAYING.
+                // This avoids a stuck pause icon on mobile autoplay rejection.
+                isPlaying = false;
+                updatePlayPauseUI(false);
+                stopProgressLoop();
             } else {
                 ytPlayer.cueVideoById({
                     videoId: vidId,
