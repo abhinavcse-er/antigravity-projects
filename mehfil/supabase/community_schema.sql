@@ -1,5 +1,5 @@
 -- MEHFIL community storage for Supabase PostgreSQL.
--- Apply only after exporting the current Render SQLite database.
+-- Fresh Community start: no historical Render community rows are imported.
 -- The Node server must use a server-side secret (never expose service_role to browsers).
 
 create table if not exists public.community_messages (
@@ -19,8 +19,8 @@ create table if not exists public.community_messages (
 create index if not exists idx_community_messages_timestamp
   on public.community_messages ("timestamp" desc, id desc);
 
--- Keep this table server-only. The Express API authenticates/validates the
--- MEHFIL client identity and enforces owner-only edit/delete operations.
+-- Keep this table server-only. The Express API validates the MEHFIL client
+-- identity and enforces owner-only edit/delete operations.
 alter table public.community_messages enable row level security;
 
 -- Intentionally no anon/authenticated policies. Server-side service_role
