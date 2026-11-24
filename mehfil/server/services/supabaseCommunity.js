@@ -77,7 +77,7 @@ module.exports = {
   },
   async likeMessage(id) {
     const rows = await request('rpc/like_community_message', {
-      method: 'POST', body: { message_id: id }
+      method: 'POST', prefer: 'return=representation', body: { message_id: id }
     });
     return toApiMessage(Array.isArray(rows) ? rows[0] : null);
   }
